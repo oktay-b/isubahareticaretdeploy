@@ -1,39 +1,58 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
+import { priceService } from './rates.service';
 
-const prisma = new PrismaClient();
+export class PortfolioService {
+  // kullanıcının tüm varlıklarını getir — canlı kar/zarar ile
+  async getPortfolio(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { balance: true },
+    });
+    if (!user) throw new Error('Kullanıcı bulunamadı.');
 
-export class WalletService {
-  /**
-   * Get all wallets for a user
-   */
-  async getWallets(userId: string) {
-    const wallets = await prisma.wallet.findMany({
+    const holdings = await prisma.holding.findMany({
       where: { userId },
-      orderBy: { currency: 'asc' },
+      include: { asset: { select: { symbol: true, name: true, category: true, unit: true } } },
     });
-    return wallets.map((w) => ({
-      id: w.id,
-      currency: w.currency,
-      balance: Number(w.balance),
-    }));
-  }
 
-  /**
-   * Get a specific wallet for a user and currency
-   */
-  async getWallet(userId: string, currency: string) {
-    const wallet = await prisma.wallet.findUnique({
-      where: { userId_currency: { userId, currency } },
-    });
-    if (!wallet) {
-      throw new Error(`${currency} cüzdanı bulunamadı.`);
-    }
+    let totalValue = Number(user.balance); // TRY bakiye dahil
+
+    const items = await Promise.all(
+      holdings.map(async (h) => {
+        const qty = Number(h.quantity);
+        const avg = Number(h.avgCost);
+
+        let currentPrice = { buy: avg, sell: avg };
+        try {
+          currentPrice = await priceService.getAssetPrice(h.asset.symbol);
+        } catch {}
+
+        const marketValue = qty * currentPrice.sell;
+        const costBasis = qty * avg;
+        const pnl = marketValue - costBasis;
+        const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+
+        totalValue += marketValue;
+
+        return {
+          id: h.id,
+          asset: h.asset,
+          quantity: qty,
+          avgCost: avg,
+          currentPrice: currentPrice.sell,
+          marketValue: parseFloat(marketValue.toFixed(2)),
+          pnl: parseFloat(pnl.toFixed(2)),
+          pnlPct: parseFloat(pnlPct.toFixed(2)),
+        };
+      })
+    );
+
     return {
-      id: wallet.id,
-      currency: wallet.currency,
-      balance: Number(wallet.balance),
+      balance: Number(user.balance),
+      totalValue: parseFloat(totalValue.toFixed(2)),
+      holdings: items,
     };
   }
 }
 
-export const walletService = new WalletService();
+export const portfolioService = new PortfolioService();

@@ -7,44 +7,43 @@ import authRoutes from './routes/auth';
 import walletRoutes from './routes/wallet';
 import transactionRoutes from './routes/transaction';
 import ratesRoutes from './routes/rates';
+import adminRoutes from './routes/admin';
 
 const app = express();
 const httpServer = createServer(app);
 
-// Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: config.corsOrigins,
   credentials: true,
 }));
 app.use(express.json());
 
-// Request logging
+// istek loglama
 app.use((req, _res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  console.log(`${new Date().toLocaleTimeString('tr-TR')} ${req.method} ${req.path}`);
   next();
 });
 
-// Routes
+// route'lar
 app.use('/api/auth', authRoutes);
-app.use('/api/wallets', walletRoutes);
+app.use('/api/portfolio', walletRoutes);
 app.use('/api/trade', transactionRoutes);
 app.use('/api/rates', ratesRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Health check
+// sağlık kontrolü
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Initialize WebSocket
 initializeSocket(httpServer);
 
-// Start server
 httpServer.listen(config.port, () => {
   console.log(`
-  🚀 Server is running!
-  📡 REST API: http://localhost:${config.port}/api
-  🔌 WebSocket: ws://localhost:${config.port}
-  💱 Rate updates every ${config.rateFetchInterval / 1000}s
+  Sunucu çalışıyor!
+  API: http://localhost:${config.port}/api
+  WebSocket: ws://localhost:${config.port}
+  Fiyat güncelleme: ${config.priceUpdateInterval / 1000} saniyede bir
   `);
 });
 

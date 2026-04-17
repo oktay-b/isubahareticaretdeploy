@@ -1,219 +1,200 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Prisma } from '@prisma/client';
+import prisma from '../lib/prisma';
+import { priceService } from './rates.service';
 
 export class TradeService {
   /**
-   * Execute a BUY trade: convert fromCurrency to toCurrency at current rate
-   * e.g. BUY USD with TRY: fromCurrency=TRY, toCurrency=USD, amount=1000(TRY)
-   * Result: deduct 1000 TRY, add (1000/rate) USD
+   * varlık satın al — TRY bakiyeden düşer, holding güncellenir
+   * ortalama maliyet: (eski toplam + yeni toplam) / (eski miktar + yeni miktar)
    */
-  async buy(userId: string, fromCurrency: string, toCurrency: string, amount: number) {
-    // Get current rate for the pair
-    const rate = await this.getRate(fromCurrency, toCurrency);
-    const convertedAmount = amount / rate;
+  async buy(userId: string, assetSymbol: string, quantity: number) {
+    const asset = await prisma.asset.findUnique({ where: { symbol: assetSymbol } });
+    if (!asset) throw new Error(`${assetSymbol} bulunamadı.`);
+    if (!asset.active) throw new Error(`${asset.name} şu an işleme kapalı.`);
+
+    const price = await priceService.getAssetPrice(assetSymbol);
+    const unitPrice = price.buy; // alış fiyatı
+    const totalCost = quantity * unitPrice;
 
     return await prisma.$transaction(async (tx) => {
-      // Check source wallet balance
-      const sourceWallet = await tx.wallet.findUnique({
-        where: { userId_currency: { userId, currency: fromCurrency } },
-      });
-      if (!sourceWallet) {
-        throw new Error(`${fromCurrency} cüzdanı bulunamadı.`);
-      }
-      if (Number(sourceWallet.balance) < amount) {
-        throw new Error(`Yetersiz ${fromCurrency} bakiyesi. Mevcut: ${sourceWallet.balance}`);
+      // bakiye kontrolü
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) throw new Error('Kullanıcı bulunamadı.');
+
+      const currentBalance = Number(user.balance);
+      if (currentBalance < totalCost) {
+        throw new Error(
+          `Yetersiz bakiye. Gereken: ${totalCost.toFixed(2)} ₺, Mevcut: ${currentBalance.toFixed(2)} ₺`
+        );
       }
 
-      // Ensure target wallet exists
-      let targetWallet = await tx.wallet.findUnique({
-        where: { userId_currency: { userId, currency: toCurrency } },
+      // bakiye düş
+      await tx.user.update({
+        where: { id: userId },
+        data: { balance: { decrement: totalCost } },
       });
-      if (!targetWallet) {
-        targetWallet = await tx.wallet.create({
-          data: { userId, currency: toCurrency, balance: 0 },
+
+      // holding güncelle — varsa ortalama maliyeti hesapla
+      const existing = await tx.holding.findUnique({
+        where: { userId_assetId: { userId, assetId: asset.id } },
+      });
+
+      if (existing) {
+        const oldQty = Number(existing.quantity);
+        const oldAvg = Number(existing.avgCost);
+        const newQty = oldQty + quantity;
+        // ağırlıklı ortalama maliyet
+        const newAvg = (oldQty * oldAvg + quantity * unitPrice) / newQty;
+
+        await tx.holding.update({
+          where: { id: existing.id },
+          data: {
+            quantity: new Prisma.Decimal(newQty),
+            avgCost: new Prisma.Decimal(parseFloat(newAvg.toFixed(4))),
+          },
+        });
+      } else {
+        await tx.holding.create({
+          data: {
+            userId,
+            assetId: asset.id,
+            quantity,
+            avgCost: unitPrice,
+          },
         });
       }
 
-      // Deduct from source
-      await tx.wallet.update({
-        where: { id: sourceWallet.id },
-        data: { balance: { decrement: amount } },
-      });
-
-      // Add to target
-      await tx.wallet.update({
-        where: { id: targetWallet.id },
-        data: { balance: { increment: convertedAmount } },
-      });
-
-      // Record transaction
-      const transaction = await tx.transaction.create({
+      // sipariş kaydı
+      const order = await tx.order.create({
         data: {
           userId,
+          assetId: asset.id,
           type: 'BUY',
-          fromCurrency,
-          toCurrency,
-          amount: new Prisma.Decimal(amount),
-          rate: new Prisma.Decimal(rate),
-          total: new Prisma.Decimal(convertedAmount),
+          quantity,
+          price: unitPrice,
+          total: totalCost,
+          pnl: 0,
+          pnlPct: 0,
         },
       });
 
       return {
-        id: transaction.id,
+        id: order.id,
         type: 'BUY',
-        fromCurrency,
-        toCurrency,
-        amount: Number(transaction.amount),
-        rate: Number(transaction.rate),
-        total: Number(transaction.total),
-        createdAt: transaction.createdAt,
+        asset: { symbol: asset.symbol, name: asset.name },
+        quantity,
+        price: unitPrice,
+        total: totalCost,
+        createdAt: order.createdAt,
       };
     });
   }
 
   /**
-   * Execute a SELL trade: convert toCurrency back to fromCurrency
-   * e.g. SELL USD for TRY: fromCurrency=USD, toCurrency=TRY, amount=100(USD)
-   * Result: deduct 100 USD, add (100*rate) TRY
+   * varlık sat — holding'den düşer, TRY bakiyeye eklenir
+   * kar/zarar: (satış fiyatı - ortalama maliyet) * miktar
    */
-  async sell(userId: string, fromCurrency: string, toCurrency: string, amount: number) {
-    const rate = await this.getRate(fromCurrency, toCurrency);
-    const convertedAmount = amount * rate;
+  async sell(userId: string, assetSymbol: string, quantity: number) {
+    const asset = await prisma.asset.findUnique({ where: { symbol: assetSymbol } });
+    if (!asset) throw new Error(`${assetSymbol} bulunamadı.`);
+    if (!asset.active) throw new Error(`${asset.name} şu an işleme kapalı.`);
+
+    const price = await priceService.getAssetPrice(assetSymbol);
+    const unitPrice = price.sell; // satış fiyatı
+    const totalRevenue = quantity * unitPrice;
 
     return await prisma.$transaction(async (tx) => {
-      // Check source wallet
-      const sourceWallet = await tx.wallet.findUnique({
-        where: { userId_currency: { userId, currency: fromCurrency } },
+      // holding kontrolü
+      const holding = await tx.holding.findUnique({
+        where: { userId_assetId: { userId, assetId: asset.id } },
       });
-      if (!sourceWallet) {
-        throw new Error(`${fromCurrency} cüzdanı bulunamadı.`);
-      }
-      if (Number(sourceWallet.balance) < amount) {
-        throw new Error(`Yetersiz ${fromCurrency} bakiyesi. Mevcut: ${sourceWallet.balance}`);
+
+      if (!holding || Number(holding.quantity) < quantity) {
+        const mevcut = holding ? Number(holding.quantity) : 0;
+        throw new Error(
+          `Yetersiz ${asset.name} miktarı. Satmak istediğiniz: ${quantity}, Elinizde: ${mevcut}`
+        );
       }
 
-      // Ensure target wallet
-      let targetWallet = await tx.wallet.findUnique({
-        where: { userId_currency: { userId, currency: toCurrency } },
-      });
-      if (!targetWallet) {
-        targetWallet = await tx.wallet.create({
-          data: { userId, currency: toCurrency, balance: 0 },
+      const avgCost = Number(holding.avgCost);
+      const pnl = (unitPrice - avgCost) * quantity;
+      const pnlPct = avgCost > 0 ? ((unitPrice - avgCost) / avgCost) * 100 : 0;
+
+      // holding güncelle
+      const newQty = Number(holding.quantity) - quantity;
+      if (newQty <= 0.0001) {
+        // neredeyse sıfır kaldıysa sil
+        await tx.holding.delete({ where: { id: holding.id } });
+      } else {
+        await tx.holding.update({
+          where: { id: holding.id },
+          data: { quantity: new Prisma.Decimal(newQty) },
+          // avgCost değişmez, sadece miktar azalır
         });
       }
 
-      // Deduct from source
-      await tx.wallet.update({
-        where: { id: sourceWallet.id },
-        data: { balance: { decrement: amount } },
+      // bakiye ekle
+      await tx.user.update({
+        where: { id: userId },
+        data: { balance: { increment: totalRevenue } },
       });
 
-      // Add to target
-      await tx.wallet.update({
-        where: { id: targetWallet.id },
-        data: { balance: { increment: convertedAmount } },
-      });
-
-      // Record transaction
-      const transaction = await tx.transaction.create({
+      // sipariş kaydı
+      const order = await tx.order.create({
         data: {
           userId,
+          assetId: asset.id,
           type: 'SELL',
-          fromCurrency,
-          toCurrency,
-          amount: new Prisma.Decimal(amount),
-          rate: new Prisma.Decimal(rate),
-          total: new Prisma.Decimal(convertedAmount),
+          quantity,
+          price: unitPrice,
+          total: totalRevenue,
+          pnl: parseFloat(pnl.toFixed(2)),
+          pnlPct: parseFloat(pnlPct.toFixed(2)),
         },
       });
 
       return {
-        id: transaction.id,
+        id: order.id,
         type: 'SELL',
-        fromCurrency,
-        toCurrency,
-        amount: Number(transaction.amount),
-        rate: Number(transaction.rate),
-        total: Number(transaction.total),
-        createdAt: transaction.createdAt,
+        asset: { symbol: asset.symbol, name: asset.name },
+        quantity,
+        price: unitPrice,
+        total: totalRevenue,
+        pnl: parseFloat(pnl.toFixed(2)),
+        pnlPct: parseFloat(pnlPct.toFixed(2)),
+        createdAt: order.createdAt,
       };
     });
   }
 
-  /**
-   * Get transaction history for a user
-   */
-  async getHistory(userId: string, page: number = 1, limit: number = 20) {
+  // işlem geçmişi — sayfalı
+  async getHistory(userId: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    const [transactions, total] = await Promise.all([
-      prisma.transaction.findMany({
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
         where: { userId },
+        include: { asset: { select: { symbol: true, name: true, category: true } } },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.transaction.count({ where: { userId } }),
+      prisma.order.count({ where: { userId } }),
     ]);
 
     return {
-      transactions: transactions.map((t) => ({
-        id: t.id,
-        type: t.type,
-        fromCurrency: t.fromCurrency,
-        toCurrency: t.toCurrency,
-        amount: Number(t.amount),
-        rate: Number(t.rate),
-        total: Number(t.total),
-        createdAt: t.createdAt,
+      orders: orders.map((o) => ({
+        id: o.id,
+        type: o.type,
+        asset: o.asset,
+        quantity: Number(o.quantity),
+        price: Number(o.price),
+        total: Number(o.total),
+        pnl: Number(o.pnl),
+        pnlPct: Number(o.pnlPct),
+        createdAt: o.createdAt,
       })),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
-  }
-
-  /**
-   * Get the exchange rate between two currencies.
-   * Looks up the rate from the ExchangeRates table.
-   */
-  private async getRate(from: string, to: string): Promise<number> {
-    // Try direct pair
-    const directPair = `${from}/${to}`;
-    const directRate = await prisma.exchangeRate.findUnique({
-      where: { currency: directPair },
-    });
-    if (directRate) {
-      return Number(directRate.rate);
-    }
-
-    // Try reverse pair
-    const reversePair = `${to}/${from}`;
-    const reverseRate = await prisma.exchangeRate.findUnique({
-      where: { currency: reversePair },
-    });
-    if (reverseRate) {
-      return 1 / Number(reverseRate.rate);
-    }
-
-    // Try to calculate via TRY
-    if (from !== 'TRY' && to !== 'TRY') {
-      const fromToTry = await prisma.exchangeRate.findUnique({
-        where: { currency: `${from}/TRY` },
-      });
-      const toToTry = await prisma.exchangeRate.findUnique({
-        where: { currency: `${to}/TRY` },
-      });
-      if (fromToTry && toToTry) {
-        return Number(fromToTry.rate) / Number(toToTry.rate);
-      }
-    }
-
-    throw new Error(`${from}/${to} kuru bulunamadı.`);
   }
 }
 
