@@ -7,36 +7,32 @@ import { tradeService } from '../services/trade.service';
 const router = Router();
 
 const tradeSchema = z.object({
-  fromCurrency: z.string().min(1, 'Kaynak döviz gereklidir.'),
-  toCurrency: z.string().min(1, 'Hedef döviz gereklidir.'),
-  amount: z.number().positive('Miktar pozitif olmalıdır.'),
+  symbol: z.string().min(1, 'Varlık seçiniz.'),
+  quantity: z.number().positive('Miktar sıfırdan büyük olmalı.'),
 });
 
-// POST /api/trade/buy — Buy currency
 router.post('/buy', authMiddleware, validate(tradeSchema), async (req, res) => {
   try {
     const authReq = req as AuthRequest;
-    const { fromCurrency, toCurrency, amount } = req.body;
-    const result = await tradeService.buy(authReq.user!.userId, fromCurrency, toCurrency, amount);
+    const { symbol, quantity } = req.body;
+    const result = await tradeService.buy(authReq.user!.userId, symbol, quantity);
     res.status(201).json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
 });
 
-// POST /api/trade/sell — Sell currency
 router.post('/sell', authMiddleware, validate(tradeSchema), async (req, res) => {
   try {
     const authReq = req as AuthRequest;
-    const { fromCurrency, toCurrency, amount } = req.body;
-    const result = await tradeService.sell(authReq.user!.userId, fromCurrency, toCurrency, amount);
+    const { symbol, quantity } = req.body;
+    const result = await tradeService.sell(authReq.user!.userId, symbol, quantity);
     res.status(201).json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
 });
 
-// GET /api/transactions — Transaction history
 router.get('/history', authMiddleware, async (req, res) => {
   try {
     const authReq = req as AuthRequest;
