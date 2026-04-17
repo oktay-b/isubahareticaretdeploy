@@ -1,31 +1,38 @@
-# 💹 Real-Time Currency Trading Platform
+# İSÜ Bahar — Yatırım Simülatörü
 
-Gerçek zamanlı döviz alım-satım platformu. Canlı kurlarla USD, EUR, GBP ve TRY arasında simüle edilmiş işlemler yapın.
+Gerçek zamanlı altın, döviz ve kripto para takip ve alım-satım platformu. Canlı fiyatlarla simüle edilmiş yatırım işlemleri yapın, portföyünüzü takip edin, kar/zarar durumunuzu görün.
 
-## 🚀 Hızlı Başlangıç
+## Özellikler
+
+- Gram/çeyrek/yarım/tam/Cumhuriyet altını ve gram gümüş takibi
+- USD, EUR, GBP döviz alım-satım
+- Bitcoin ve Ethereum (simüle) alım-satım
+- Ortalama maliyet hesaplı portföy takibi
+- Anlık kar/zarar yüzdesi gösterimi
+- WebSocket ile canlı fiyat güncellemesi (10 saniyede bir)
+- İşlem geçmişi ve filtreleme
+- Admin paneli (varlık ve kullanıcı yönetimi)
+- JWT kimlik doğrulama, Zod validasyon
+
+## Kurulum
 
 ### Gereksinimler
 - Node.js 18+
-- PostgreSQL (çalışır durumda)
 
-### 1. Backend Kurulumu
+### Backend
 
 ```bash
 cd backend
 npm install
+cp .env.example .env   # .env dosyasını düzenleyin
 
-# .env dosyasını düzenleyin (DATABASE_URL, JWT_SECRET, vb.)
-# PostgreSQL bağlantınızı ayarlayın
-
-# Veritabanı tablolarını oluşturun
 npx prisma db push
 npx prisma generate
-
-# Sunucuyu başlatın
+npm run seed            # varlıkları ve admin kullanıcıyı yükler
 npm run dev
 ```
 
-### 2. Frontend Kurulumu
+### Frontend
 
 ```bash
 cd frontend
@@ -33,54 +40,54 @@ npm install
 npm run dev
 ```
 
-### 3. Kullanım
+### Kullanım
 
 1. `http://localhost:3000` adresini açın
-2. Yeni hesap oluşturun (100.000₺ demo bakiye ile başlarsınız)
-3. Dashboard'dan canlı kurları takip edin
-4. Al/Sat sayfasından döviz alım-satım işlemleri yapın
+2. Yeni hesap oluşturun (100.000 ₺ demo bakiye ile başlarsınız)
+3. Dashboard'dan canlı fiyatları takip edin
+4. Al/Sat sayfasından altın, döviz veya kripto alım-satım yapın
+5. Portföy sayfasından kar/zarar durumunuzu izleyin
 
-## 🏗️ Mimari
+Admin girişi: `admin@isu.edu.tr` / `admin123`
+
+## Mimari
 
 ```
-Frontend (Next.js + TailwindCSS)  →  Backend API (Express + Socket.io)  →  PostgreSQL (Prisma ORM)
-                                                    ↓
-                                        ExchangeRate-API (döviz kurları)
+Frontend (Next.js + Tailwind)  →  Backend (Express + Socket.io)  →  SQLite (Prisma ORM)
+                                          ↓
+                              Simüle fiyat servisi (10sn aralıklı)
 ```
 
-## 📡 API Endpoints
+## API
 
 | Method | Endpoint | Açıklama |
 |--------|----------|----------|
-| POST | `/api/auth/register` | Yeni kullanıcı kaydı |
+| POST | `/api/auth/register` | Kayıt |
 | POST | `/api/auth/login` | Giriş |
-| GET | `/api/auth/me` | Kullanıcı profili |
-| GET | `/api/wallets` | Cüzdanları listele |
-| POST | `/api/trade/buy` | Döviz al |
-| POST | `/api/trade/sell` | Döviz sat |
+| GET | `/api/auth/me` | Profil |
+| GET | `/api/portfolio` | Portföy (bakiye + varlıklar + kar/zarar) |
+| POST | `/api/trade/buy` | Varlık al |
+| POST | `/api/trade/sell` | Varlık sat |
 | GET | `/api/trade/history` | İşlem geçmişi |
-| GET | `/api/rates` | Güncel kurlar |
+| GET | `/api/rates` | Güncel fiyatlar |
+| GET | `/api/rates/assets` | Varlık listesi |
+| GET | `/api/admin/stats` | Admin istatistikleri |
+| GET | `/api/admin/users` | Kullanıcı listesi |
+| GET | `/api/admin/assets` | Varlık yönetimi |
 
-## 🔌 WebSocket Events
+## WebSocket
 
 | Event | Yön | Açıklama |
 |-------|-----|----------|
-| `rates:update` | Server → Client | Güncel kur verileri |
-| `rates:history` | Server → Client | Kur geçmişi (grafik) |
+| `prices:update` | Server → Client | Güncel fiyatlar |
+| `prices:history` | Server → Client | Fiyat geçmişi (grafik) |
 
-## 🛡️ Güvenlik
-
-- JWT Authentication
-- bcrypt ile şifre hashleme
-- Zod ile input validasyonu
-- CORS koruması
-- Prisma transaction ile veri bütünlüğü
-
-## ⚙️ Teknoloji Stack
+## Teknolojiler
 
 | Katman | Teknoloji |
 |--------|-----------|
-| Frontend | Next.js, TailwindCSS, Zustand, Recharts |
+| Frontend | Next.js, Tailwind CSS, Zustand, Recharts |
 | Backend | Node.js, Express, Socket.io, TypeScript |
-| Database | PostgreSQL, Prisma ORM |
-| Auth | JWT, bcrypt |
+| Veritabanı | SQLite, Prisma ORM |
+| Kimlik Doğrulama | JWT, bcrypt |
+| Validasyon | Zod |

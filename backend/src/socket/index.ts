@@ -1,6 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
-import { ratesService } from '../services/rates.service';
+import { priceService } from '../services/rates.service';
 import { config } from '../config';
 
 let io: SocketServer;
@@ -8,62 +8,51 @@ let io: SocketServer;
 export function initializeSocket(httpServer: HttpServer) {
   io = new SocketServer(httpServer, {
     cors: {
-      origin: ['http://localhost:3000', 'http://localhost:3001'],
+      origin: config.corsOrigins,
       methods: ['GET', 'POST'],
     },
   });
 
   io.on('connection', (socket) => {
-    console.log(`🔌 Client connected: ${socket.id}`);
+    console.log(`Bağlantı: ${socket.id}`);
 
-    // Send current rates immediately on connection
-    const currentRates = ratesService.getCurrentRates();
-    if (Object.keys(currentRates).length > 0) {
-      socket.emit('rates:update', {
-        rates: currentRates,
-        timestamp: Date.now(),
-      });
+    // bağlanan istemciye güncel fiyatları gönder
+    const current = priceService.getCurrentPrices();
+    if (Object.keys(current).length > 0) {
+      socket.emit('prices:update', { prices: current, timestamp: Date.now() });
     }
 
-    // Send rate history for charts
-    const history = ratesService.getRateHistory();
+    const history = priceService.getPriceHistory();
     if (history.length > 0) {
-      socket.emit('rates:history', history);
+      socket.emit('prices:history', history);
     }
 
     socket.on('disconnect', () => {
-      console.log(`🔌 Client disconnected: ${socket.id}`);
+      console.log(`Bağlantı kesildi: ${socket.id}`);
     });
   });
 
-  // Start periodic rate fetching and broadcasting
-  startRateBroadcast();
-
+  startPriceBroadcast();
   return io;
 }
 
-/**
- * Periodically fetch rates and broadcast to all connected clients
- */
-function startRateBroadcast() {
-  // Fetch immediately
-  ratesService.fetchRates().then((rates) => {
-    if (io) {
-      io.emit('rates:update', { rates, timestamp: Date.now() });
-    }
+function startPriceBroadcast() {
+  // ilk güncelleme
+  priceService.updatePrices().then((prices) => {
+    if (io) io.emit('prices:update', { prices, timestamp: Date.now() });
   });
 
-  // Then every N seconds
+  // periyodik güncelleme
   setInterval(async () => {
     try {
-      const rates = await ratesService.fetchRates();
+      const prices = await priceService.updatePrices();
       if (io) {
-        io.emit('rates:update', { rates, timestamp: Date.now() });
+        io.emit('prices:update', { prices, timestamp: Date.now() });
       }
-    } catch (error) {
-      console.error('Rate broadcast hatası:', error);
+    } catch (err) {
+      console.error('Fiyat yayını hatası:', err);
     }
-  }, config.rateFetchInterval);
+  }, config.priceUpdateInterval);
 }
 
 export { io };
