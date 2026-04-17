@@ -1,29 +1,40 @@
 import { Router } from 'express';
-import { ratesService } from '../services/rates.service';
+import { priceService } from '../services/rates.service';
+import prisma from '../lib/prisma';
 
 const router = Router();
 
-// GET /api/rates — Get current exchange rates
+// güncel fiyatlar
 router.get('/', async (_req, res) => {
   try {
-    const rates = ratesService.getCurrentRates();
-    if (Object.keys(rates).length === 0) {
-      // First request, fetch fresh
-      const freshRates = await ratesService.fetchRates();
-      res.json({ rates: freshRates, updatedAt: new Date() });
-    } else {
-      res.json({ rates, updatedAt: new Date() });
+    let prices = priceService.getCurrentPrices();
+    if (Object.keys(prices).length === 0) {
+      prices = await priceService.updatePrices();
     }
+    res.json({ prices, updatedAt: new Date() });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// GET /api/rates/history — Get rate history for charts
+// fiyat geçmişi (grafik için)
 router.get('/history', async (_req, res) => {
   try {
-    const history = ratesService.getRateHistory();
+    const history = priceService.getPriceHistory();
     res.json(history);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// varlık listesi (frontend'de gösterilecek)
+router.get('/assets', async (_req, res) => {
+  try {
+    const assets = await prisma.asset.findMany({
+      where: { active: true },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+    });
+    res.json(assets);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

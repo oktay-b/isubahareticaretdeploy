@@ -1,121 +1,105 @@
-import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { config } from '../config';
 
-const prisma = new PrismaClient();
+// bellekte tutulan son fiyatlar — hızlı erişim için
+let priceCache: Record<string, { buy: number; sell: number }> = {};
+let priceHistory: Array<{ timestamp: number; prices: Record<string, { buy: number; sell: number }> }> = [];
+const MAX_HISTORY = 120;
 
-// In-memory rate cache for fast access
-let rateCache: Record<string, number> = {};
-let rateHistory: Array<{ timestamp: number; rates: Record<string, number> }> = [];
-const MAX_HISTORY = 100;
+// her varlığın volatilite oranı farklı
+const volatility: Record<string, number> = {
+  ALTIN: 0.003,
+  GUMUS: 0.005,
+  DOVIZ: 0.002,
+  KRIPTO: 0.012,
+};
 
-export class RatesService {
-  /**
-   * Fetch latest exchange rates from ExchangeRate-API
-   * Falls back to mock data if API is unreachable
-   */
-  async fetchRates(): Promise<Record<string, number>> {
-    try {
-      const apiKey = config.exchangeApiKey;
-      let rates: Record<string, number> = {};
+export class PriceService {
+  // fiyatları güncelle — simülasyon
+  async updatePrices(): Promise<Record<string, { buy: number; sell: number }>> {
+    const assets = await prisma.asset.findMany({ where: { active: true } });
+    const result: Record<string, { buy: number; sell: number }> = {};
 
-      if (apiKey && apiKey !== 'demo') {
-        // Use real API
-        const response = await axios.get(
-          `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`,
-          { timeout: 5000 }
-        );
-        const data = response.data;
-        if (data.result === 'success') {
-          const usdRates = data.conversion_rates;
-          // Calculate needed pairs
-          rates['USD/TRY'] = usdRates.TRY || 38.5;
-          rates['EUR/TRY'] = (usdRates.TRY / usdRates.EUR) || 41.2;
-          rates['GBP/TRY'] = (usdRates.TRY / usdRates.GBP) || 48.9;
-          rates['USD/EUR'] = usdRates.EUR || 0.93;
-        }
+    for (const asset of assets) {
+      const assetDef = config.assets.find((a) => a.symbol === asset.symbol);
+      if (!assetDef) continue;
+
+      let midPrice: number;
+
+      // önceki fiyat varsa onun üstüne dalgalanma ekle
+      if (priceCache[asset.symbol]) {
+        const prev = (priceCache[asset.symbol].buy + priceCache[asset.symbol].sell) / 2;
+        const vol = volatility[asset.category] || 0.003;
+        const change = 1 + (Math.random() - 0.5) * 2 * vol;
+        midPrice = prev * change;
+
+        // fiyat çok sapmasın, base'in %20 altına veya %20 üstüne çıkmasın
+        const minPrice = assetDef.basePrice * 0.8;
+        const maxPrice = assetDef.basePrice * 1.2;
+        midPrice = Math.max(minPrice, Math.min(maxPrice, midPrice));
+      } else {
+        midPrice = assetDef.basePrice;
       }
 
-      // Use mock/simulated data if no API key or API failed
-      if (Object.keys(rates).length === 0) {
-        rates = this.generateMockRates();
-      }
+      const spread = midPrice * config.spreadRate;
+      const buyPrice = parseFloat((midPrice + spread).toFixed(4));
+      const sellPrice = parseFloat((midPrice - spread).toFixed(4));
 
-      // Update database and cache
-      await this.updateRatesInDb(rates);
-      rateCache = rates;
+      result[asset.symbol] = { buy: buyPrice, sell: sellPrice };
 
-      // Add to history
-      rateHistory.push({ timestamp: Date.now(), rates: { ...rates } });
-      if (rateHistory.length > MAX_HISTORY) {
-        rateHistory = rateHistory.slice(-MAX_HISTORY);
-      }
-
-      return rates;
-    } catch (error) {
-      console.error('Kur verisi alınamadı:', error);
-      // Return cached rates or generate mock
-      if (Object.keys(rateCache).length > 0) {
-        return rateCache;
-      }
-      const mockRates = this.generateMockRates();
-      rateCache = mockRates;
-      return mockRates;
-    }
-  }
-
-  /**
-   * Get current cached rates
-   */
-  getCurrentRates(): Record<string, number> {
-    return { ...rateCache };
-  }
-
-  /**
-   * Get rate history for charts
-   */
-  getRateHistory() {
-    return [...rateHistory];
-  }
-
-  /**
-   * Generate realistic mock rates with small random fluctuations
-   */
-  private generateMockRates(): Record<string, number> {
-    const base: Record<string, number> = {
-      'USD/TRY': 38.5,
-      'EUR/TRY': 41.2,
-      'GBP/TRY': 48.9,
-      'USD/EUR': 0.93,
-    };
-
-    // If we have previous rates, add small fluctuation
-    if (Object.keys(rateCache).length > 0) {
-      const result: Record<string, number> = {};
-      for (const [pair, rate] of Object.entries(rateCache)) {
-        // Random fluctuation between -0.5% and +0.5%
-        const fluctuation = 1 + (Math.random() - 0.5) * 0.01;
-        result[pair] = parseFloat((rate * fluctuation).toFixed(6));
-      }
-      return result;
+      // db'ye kaydet
+      await prisma.price.create({
+        data: {
+          assetId: asset.id,
+          buyPrice,
+          sellPrice,
+        },
+      });
     }
 
-    return base;
+    // cache güncelle
+    priceCache = result;
+
+    // tarihçeye ekle
+    priceHistory.push({ timestamp: Date.now(), prices: { ...result } });
+    if (priceHistory.length > MAX_HISTORY) {
+      priceHistory = priceHistory.slice(-MAX_HISTORY);
+    }
+
+    return result;
   }
 
-  /**
-   * Update rates in database
-   */
-  private async updateRatesInDb(rates: Record<string, number>) {
-    const upsertPromises = Object.entries(rates).map(([currency, rate]) =>
-      prisma.exchangeRate.upsert({
-        where: { currency },
-        update: { rate, updatedAt: new Date() },
-        create: { currency, rate },
-      })
-    );
-    await Promise.all(upsertPromises);
+  getCurrentPrices() {
+    return { ...priceCache };
+  }
+
+  getPriceHistory() {
+    return [...priceHistory];
+  }
+
+  // belirli bir varlığın son fiyatını getir
+  async getAssetPrice(symbol: string): Promise<{ buy: number; sell: number }> {
+    if (priceCache[symbol]) {
+      return priceCache[symbol];
+    }
+
+    // cache'de yoksa db'den son kaydı çek
+    const asset = await prisma.asset.findUnique({ where: { symbol } });
+    if (!asset) throw new Error(`${symbol} bulunamadı.`);
+
+    const lastPrice = await prisma.price.findFirst({
+      where: { assetId: asset.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!lastPrice) {
+      const def = config.assets.find((a) => a.symbol === symbol);
+      const base = def?.basePrice || 0;
+      return { buy: base, sell: base };
+    }
+
+    return { buy: Number(lastPrice.buyPrice), sell: Number(lastPrice.sellPrice) };
   }
 }
 
-export const ratesService = new RatesService();
+export const priceService = new PriceService();
