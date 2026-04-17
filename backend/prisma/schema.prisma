@@ -8,48 +8,72 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  name         String
-  email        String        @unique
-  password     String
-  createdAt    DateTime      @default(now())
-  wallets      Wallet[]
-  transactions Transaction[]
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      String    @default("USER")
+  balance   Decimal   @default(0)
+  createdAt DateTime  @default(now())
+  holdings  Holding[]
+  orders    Order[]
 
   @@map("users")
 }
 
-model Wallet {
-  id       String @id @default(uuid())
-  userId   String
-  currency String
-  balance  Decimal @default(0)
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Asset {
+  id       String    @id @default(uuid())
+  symbol   String    @unique
+  name     String
+  category String
+  unit     String    @default("adet")
+  active   Boolean   @default(true)
+  prices   Price[]
+  holdings Holding[]
+  orders   Order[]
 
-  @@unique([userId, currency])
-  @@map("wallets")
+  @@map("assets")
 }
 
-model Transaction {
-  id           String   @id @default(uuid())
-  userId       String
-  type         String
-  fromCurrency String
-  toCurrency   String
-  amount       Decimal
-  rate         Decimal
-  total        Decimal
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("transactions")
-}
-
-model ExchangeRate {
+model Price {
   id        String   @id @default(uuid())
-  currency  String   @unique
-  rate      Decimal
-  updatedAt DateTime @default(now()) @updatedAt
+  assetId   String
+  buyPrice  Decimal
+  sellPrice Decimal
+  createdAt DateTime @default(now())
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
-  @@map("exchange_rates")
+  @@index([assetId, createdAt])
+  @@map("prices")
+}
+
+model Holding {
+  id       String  @id @default(uuid())
+  userId   String
+  assetId  String
+  quantity Decimal @default(0)
+  avgCost  Decimal @default(0)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset    Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+  @@map("holdings")
+}
+
+model Order {
+  id        String   @id @default(uuid())
+  userId    String
+  assetId   String
+  type      String
+  quantity  Decimal
+  price     Decimal
+  total     Decimal
+  pnl       Decimal  @default(0)
+  pnlPct    Decimal  @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("orders")
 }
