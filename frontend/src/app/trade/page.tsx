@@ -44,7 +44,7 @@ export default function TradePage() {
   const pairs = Object.keys(rates);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0c0f1a, #111827)' }}>
+    <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
       <Navbar />
       <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px' }}>
         <div className="slide-up" style={{ marginBottom: '32px' }}>

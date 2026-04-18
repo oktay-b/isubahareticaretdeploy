@@ -6,14 +6,14 @@ interface WalletCardProps {
 }
 
 const currencyConfig: Record<string, { flag: string; name: string; color: string }> = {
-  TRY: { flag: '🇹🇷', name: 'Türk Lirası', color: '#ef4444' },
-  USD: { flag: '🇺🇸', name: 'Amerikan Doları', color: '#6366f1' },
-  EUR: { flag: '🇪🇺', name: 'Euro', color: '#06b6d4' },
-  GBP: { flag: '🇬🇧', name: 'İngiliz Sterlini', color: '#f59e0b' },
+  TRY: { flag: '', name: 'Türk Lirası', color: '#000000' },
+  USD: { flag: '', name: 'Amerikan Doları', color: '#007fff' },
+  EUR: { flag: '', name: 'Euro', color: '#007fff' },
+  GBP: { flag: '', name: 'İngiliz Sterlini', color: '#007fff' },
 };
 
 export default function WalletCard({ currency, balance }: WalletCardProps) {
-  const config = currencyConfig[currency] || { flag: '💲', name: currency, color: '#6366f1' };
+  const config = currencyConfig[currency] || { flag: '', name: currency, color: '#6366f1' };
 
   const formatBalance = (bal: number) => {
     return new Intl.NumberFormat('tr-TR', {
@@ -52,10 +52,9 @@ export default function WalletCard({ currency, balance }: WalletCardProps) {
           width: '48px',
           height: '48px',
           borderRadius: '12px',
-          display: 'flex',
+          display: 'none',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '28px',
           background: `${config.color}15`,
         }}>
           {config.flag}

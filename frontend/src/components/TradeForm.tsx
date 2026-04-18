@@ -74,12 +74,12 @@ export default function TradeForm() {
       if (mode === 'BUY') {
         const res = await tradeApi.buy(data);
         setResult(
-          `✅ ${res.data.amount.toFixed(2)} ${fromCurrency} ile ${res.data.total.toFixed(4)} ${toCurrency} satın aldınız. Kur: ${res.data.rate.toFixed(4)}`
+          `${res.data.amount.toFixed(2)} ${fromCurrency} ile ${res.data.total.toFixed(4)} ${toCurrency} satın aldınız. Kur: ${res.data.rate.toFixed(4)}`
         );
       } else {
         const res = await tradeApi.sell(data);
         setResult(
-          `✅ ${res.data.amount.toFixed(2)} ${fromCurrency} sattınız ve ${res.data.total.toFixed(4)} ${toCurrency} kazandınız. Kur: ${res.data.rate.toFixed(4)}`
+          `${res.data.amount.toFixed(2)} ${fromCurrency} sattınız ve ${res.data.total.toFixed(4)} ${toCurrency} kazandınız. Kur: ${res.data.rate.toFixed(4)}`
         );
       }
 
@@ -104,7 +104,7 @@ export default function TradeForm() {
         marginBottom: '24px',
         color: 'var(--color-text-primary)',
       }}>
-        💱 Hızlı İşlem
+        Hızlı İşlem
       </h3>
 
       {/* Mode Toggle */}
@@ -187,7 +187,7 @@ export default function TradeForm() {
           fontSize: '20px',
           color: 'var(--color-text-muted)',
         }}>
-          →
+          
         </div>
         <div style={{ flex: 1 }}>
           <label style={{
@@ -271,7 +271,7 @@ export default function TradeForm() {
           color: 'var(--color-danger)',
           fontSize: '13px',
         }}>
-          ❌ {error}
+          {error}
         </div>
       )}
 
@@ -297,7 +297,7 @@ export default function TradeForm() {
         className={mode === 'BUY' ? 'btn-success' : 'btn-danger'}
         style={{ width: '100%', padding: '14px', fontSize: '16px' }}
       >
-        {loading ? '⏳ İşleniyor...' : mode === 'BUY' ? `${toCurrency} Satın Al` : `${fromCurrency} Sat`}
+        {loading ? 'İşleniyor...' : mode === 'BUY' ? `${toCurrency} Satın Al` : `${fromCurrency} Sat`}
       </button>
     </div>
   );

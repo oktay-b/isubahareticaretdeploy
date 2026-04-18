@@ -6,10 +6,10 @@ import { useStore } from '@/store/useStore';
 import { useEffect, useState } from 'react';
 
 const navLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/trade', label: 'Al / Sat', icon: '💱' },
-  { href: '/wallet', label: 'Cüzdan', icon: '💰' },
-  { href: '/history', label: 'İşlem Geçmişi', icon: '📋' },
+  { href: '/dashboard', label: 'Dashboard', icon: '' },
+  { href: '/trade', label: 'Al / Sat', icon: '' },
+  { href: '/wallet', label: 'Cüzdan', icon: '' },
+  { href: '/history', label: 'İşlem Geçmişi', icon: '' },
 ];
 
 export default function Navbar() {
@@ -56,13 +56,12 @@ export default function Navbar() {
           textDecoration: 'none',
           color: 'var(--color-text-primary)',
         }}>
-          <span style={{ fontSize: '24px' }}>💹</span>
+          <span style={{ fontSize: '24px' }}></span>
           <span style={{
             fontSize: '20px',
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, var(--color-primary-light), var(--color-accent))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            fontWeight: 800,
+            color: '#000000',
+            letterSpacing: '-0.5px'
           }}>
             TradingPlatform
           </span>
@@ -89,14 +88,14 @@ export default function Navbar() {
                   textDecoration: 'none',
                   fontSize: '14px',
                   fontWeight: isActive ? 600 : 400,
-                  color: isActive ? 'var(--color-primary-light)' : 'var(--color-text-secondary)',
-                  background: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                  color: isActive ? '#007fff' : 'var(--color-text-secondary)',
+                  background: isActive ? 'rgba(0, 127, 255, 0.1)' : 'transparent',
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
-                    e.currentTarget.style.color = 'var(--color-text-primary)';
+                    e.currentTarget.style.background = 'rgba(0, 127, 255, 0.05)';
+                    e.currentTarget.style.color = '#007fff';
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -122,9 +121,10 @@ export default function Navbar() {
           {user && (
             <span style={{
               fontSize: '14px',
-              color: 'var(--color-text-secondary)',
+              fontWeight: 600,
+              color: '#000000',
             }}>
-              👤 {user.name}
+              {user.name}
             </span>
           )}
           <button

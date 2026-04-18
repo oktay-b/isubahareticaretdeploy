@@ -68,7 +68,7 @@ export default function DashboardPage() {
   }, 0);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0c0f1a, #111827)' }}>
+    <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
       <Navbar />
       <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
         {/* Welcome Header */}
@@ -79,7 +79,7 @@ export default function DashboardPage() {
             color: 'var(--color-text-primary)',
             marginBottom: '8px',
           }}>
-            Hoş Geldin, {user?.name || 'Trader'} 👋
+            Hoş Geldin, {user?.name || 'Trader'}
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
             Portföy değeriniz:{' '}
@@ -124,7 +124,7 @@ export default function DashboardPage() {
             color: 'var(--color-text-primary)',
             marginBottom: '16px',
           }}>
-            💰 Cüzdanlarım
+            Cüzdanlarım
           </h2>
           <div style={{
             display: 'grid',
@@ -132,7 +132,7 @@ export default function DashboardPage() {
             gap: '16px',
           }}>
             {wallets.map((w) => (
-              <WalletCard key={w.id} currency={w.currency} balance={w.balance} />
+              <WalletCard key={w.currency} currency={w.currency} balance={w.balance} />
             ))}
           </div>
         </div>

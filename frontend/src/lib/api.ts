@@ -44,7 +44,19 @@ export const authApi = {
 
 // Wallet API
 export const walletApi = {
-  getWallets: () => api.get('/wallets'),
+  getWallets: async () => {
+    const res = await api.get('/portfolio');
+    const mapped = [];
+    if (res.data && typeof res.data.balance === 'number') {
+      mapped.push({ currency: 'TRY', balance: res.data.balance });
+    }
+    if (res.data && Array.isArray(res.data.holdings)) {
+      res.data.holdings.forEach((h: any) => {
+        mapped.push({ currency: h.asset?.symbol || 'UNKNOWN', balance: h.quantity });
+      });
+    }
+    return { ...res, data: mapped };
+  },
 };
 
 // Trade API

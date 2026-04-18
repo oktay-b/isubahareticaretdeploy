@@ -22,7 +22,7 @@ export default function TransactionTable({ transactions }: TransactionTableProps
         padding: '48px',
         textAlign: 'center',
       }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
         <div style={{
           fontSize: '16px',
           fontWeight: 600,
@@ -72,11 +72,11 @@ export default function TransactionTable({ transactions }: TransactionTableProps
                 key={tx.id}
                 className="fade-in"
                 style={{
-                  borderBottom: idx < transactions.length - 1 ? '1px solid rgba(51, 65, 85, 0.3)' : 'none',
+                  borderBottom: idx < transactions.length - 1 ? '1px solid var(--color-border)' : 'none',
                   transition: 'background 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
+                  e.currentTarget.style.background = 'rgba(252, 213, 53, 0.05)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
@@ -99,13 +99,13 @@ export default function TransactionTable({ transactions }: TransactionTableProps
                     fontSize: '12px',
                     fontWeight: 600,
                     background: tx.type === 'BUY'
-                      ? 'rgba(16, 185, 129, 0.15)'
-                      : 'rgba(239, 68, 68, 0.15)',
+                      ? 'rgba(14, 203, 129, 0.1)'
+                      : 'rgba(246, 70, 93, 0.1)',
                     color: tx.type === 'BUY'
                       ? 'var(--color-success)'
                       : 'var(--color-danger)',
                   }}>
-                    {tx.type === 'BUY' ? '📈 AL' : '📉 SAT'}
+                    {tx.type === 'BUY' ? 'AL' : 'SAT'}
                   </span>
                 </td>
                 <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--color-text-primary)' }}>

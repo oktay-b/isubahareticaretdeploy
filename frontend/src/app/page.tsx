@@ -23,7 +23,7 @@ export default function Home() {
       justifyContent: 'center',
     }}>
       <div style={{ textAlign: 'center' }}>
-        <div className="pulse-live" style={{ fontSize: '48px', marginBottom: '16px' }}>💹</div>
+        <div className="pulse-live" style={{ fontSize: '48px', marginBottom: '16px' }}></div>
         <div style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
           Yönlendiriliyorsunuz...
         </div>

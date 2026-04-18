@@ -56,6 +56,10 @@ interface AppStore {
   // UI
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
+
+  // Selected for Graph
+  selectedAsset: string;
+  setSelectedAsset: (asset: string) => void;
 }
 
 export const useStore = create<AppStore>((set, get) => ({
@@ -103,4 +107,8 @@ export const useStore = create<AppStore>((set, get) => ({
   // UI
   isLoading: false,
   setLoading: (loading) => set({ isLoading: loading }),
+
+  // Selected for Graph
+  selectedAsset: 'USD/TRY',
+  setSelectedAsset: (selectedAsset) => set({ selectedAsset }),
 }));

@@ -7,11 +7,11 @@ interface RateCardProps {
   rate: number;
 }
 
-const currencyFlags: Record<string, string> = {
-  'USD': '🇺🇸',
-  'EUR': '🇪🇺',
-  'GBP': '🇬🇧',
-  'TRY': '🇹🇷',
+const currencyFlags: Record<string, { flag: string; name: string; color: string }> = {
+  'USD': { flag: '', name: 'Amerikan Doları', color: '#007fff' },
+  'EUR': { flag: '', name: 'Euro', color: '#007fff' },
+  'GBP': { flag: '', name: 'İngiliz Sterlini', color: '#007fff' },
+  'TRY': { flag: '', name: 'Türk Lirası', color: '#000000' },
 };
 
 const currencyNames: Record<string, string> = {
@@ -22,9 +22,10 @@ const currencyNames: Record<string, string> = {
 };
 
 export default function RateCard({ pair, rate }: RateCardProps) {
-  const { previousRates } = useStore();
+  const { previousRates, selectedAsset, setSelectedAsset } = useStore();
   const prevRate = previousRates[pair];
   const [base, quote] = pair.split('/');
+  const isActive = selectedAsset === pair;
 
   let changeClass = '';
   let changePercent = 0;
@@ -42,20 +43,30 @@ export default function RateCard({ pair, rate }: RateCardProps) {
   }
 
   return (
-    <div className={`glass-card-light slide-up ${changeClass}`} style={{
-      padding: '20px',
-      transition: 'all 0.3s ease',
-      cursor: 'pointer',
-      position: 'relative',
-      overflow: 'hidden',
-    }}
+    <div 
+      className={`glass-card-light slide-up ${changeClass}`} 
+      style={{
+        padding: '20px',
+        transition: 'all 0.3s ease',
+        cursor: 'pointer',
+        position: 'relative',
+        overflow: 'hidden',
+        border: isActive ? '2px solid #007fff' : '1px solid var(--color-border)',
+        transform: isActive ? 'scale(1.02)' : 'scale(1)',
+        zIndex: isActive ? 10 : 1,
+      }}
+      onClick={() => setSelectedAsset(pair)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+        if (!isActive) {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.borderColor = 'rgba(252, 213, 53, 0.3)';
+        }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.15)';
+        if (!isActive) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.borderColor = 'var(--color-border)';
+        }
       }}
     >
       {/* Decorative gradient orb */}
@@ -72,15 +83,14 @@ export default function RateCard({ pair, rate }: RateCardProps) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '32px' }}>{currencyFlags[base] || '💲'}</span>
+          <span style={{ fontSize: '32px' }}>{currencyFlags[base]?.flag || ''}</span>
           <div>
             <div style={{
-              fontSize: '16px',
-              fontWeight: 700,
-              color: 'var(--color-text-primary)',
-              letterSpacing: '0.5px',
+              fontSize: '18px',
+              fontWeight: 800,
+              color: '#000000',
             }}>
-              {pair}
+              {currencyNames[base] || base}
             </div>
             <div style={{
               fontSize: '12px',

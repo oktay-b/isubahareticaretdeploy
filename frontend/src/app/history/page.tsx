@@ -49,7 +49,7 @@ export default function HistoryPage() {
   if (!mounted) return null;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0c0f1a, #111827)' }}>
+    <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
       <Navbar />
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
         <div className="slide-up" style={{ marginBottom: '32px' }}>
@@ -59,7 +59,7 @@ export default function HistoryPage() {
             color: 'var(--color-text-primary)',
             marginBottom: '8px',
           }}>
-            📋 İşlem Geçmişi
+            İşlem Geçmişi
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
             Tüm alım-satım işlemleriniz
@@ -71,7 +71,7 @@ export default function HistoryPage() {
             padding: '48px',
             textAlign: 'center',
           }}>
-            <div className="pulse-live" style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
+            <div className="pulse-live" style={{ fontSize: '32px', marginBottom: '12px' }}></div>
             <div style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
               Yükleniyor...
             </div>
@@ -98,7 +98,7 @@ export default function HistoryPage() {
                     opacity: page <= 1 ? 0.5 : 1,
                   }}
                 >
-                  ← Önceki
+                  Önceki
                 </button>
                 <span style={{
                   display: 'flex',
@@ -119,7 +119,7 @@ export default function HistoryPage() {
                     opacity: page >= totalPages ? 0.5 : 1,
                   }}
                 >
-                  Sonraki →
+                  Sonraki
                 </button>
               </div>
             )}
