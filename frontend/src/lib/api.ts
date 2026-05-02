@@ -59,13 +59,13 @@ export const walletApi = {
   },
 };
 
-// Trade API
+// Trade API — backend { symbol, quantity } formatında bekliyor
 export const tradeApi = {
-  buy: (data: { fromCurrency: string; toCurrency: string; amount: number }) =>
-    api.post('/trade/buy', data),
-  sell: (data: { fromCurrency: string; toCurrency: string; amount: number }) =>
+  buy:  (data: { symbol: string; quantity: number }) =>
+    api.post('/trade/buy',  data),
+  sell: (data: { symbol: string; quantity: number }) =>
     api.post('/trade/sell', data),
-  getHistory: (page: number = 1, limit: number = 20) =>
+  getHistory: (page = 1, limit = 20) =>
     api.get(`/trade/history?page=${page}&limit=${limit}`),
 };
 

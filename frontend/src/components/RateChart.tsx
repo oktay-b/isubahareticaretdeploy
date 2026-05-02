@@ -1,189 +1,190 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+
+const assetNames: Record<string, string> = {
+  'USD/TRY':        'USD / TRY',
+  'EUR/TRY':        'EUR / TRY',
+  'GBP/TRY':        'GBP / TRY',
+  'GRAM_ALTIN/TRY': 'Altın  (gram / TRY)',
+  'GRAM_GUMUS/TRY': 'Gümüş  (gram / TRY)',
+  'BTC/TRY':        'BTC / TRY',
+  'ETH/TRY':        'ETH / TRY',
+};
+
+function formatPrice(value: number, pair: string): string {
+  if (pair.startsWith('BTC') || pair.startsWith('ETH')) {
+    return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(value);
+  }
+  if (pair.startsWith('GRAM')) {
+    return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  }
+  return value.toFixed(4);
+}
+
 
 export default function RateChart() {
   const { rateHistory, selectedAsset, rates } = useStore();
-  const [timeframe, setTimeframe] = useState('1 Gün');
 
-  const timeframeConfig: Record<string, { points: number; interval: number; label: string }> = {
-    '1 Gün': { points: 24, interval: 3600000, label: 'Saatlik' }, // 1 hour steps
-    '1 Hafta': { points: 7, interval: 86400000, label: 'Günlük' }, // 1 day steps
-    '1 Ay': { points: 30, interval: 86400000, label: 'Günlük' }, // 1 day steps
-    '1 Yıl': { points: 52, interval: 604800000, label: 'Haftalık' }, // 1 week steps
-  };
-
-  // Simulation Logic: Generate mock historical data based on timeframe
   const chartData = useMemo(() => {
-    const config = timeframeConfig[timeframe] || timeframeConfig['1 Gün'];
-    const currentPrice = rates[selectedAsset] || 1.0;
-    const simulatedPoints = [];
-    const now = Date.now();
-    
-    for (let i = config.points; i >= 0; i--) {
-      const timestamp = now - i * config.interval;
-      const date = new Date(timestamp);
-      
-      // Random walk simulation with small trend
-      const randomFactor = 1 + (Math.random() - 0.5) * 0.02; 
-      const simulatedPrice = currentPrice * randomFactor;
-      
-      let timeLabel = '';
-      if (timeframe === '1 Gün') {
-        timeLabel = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-      } else {
-        timeLabel = date.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
-      }
+    if (!selectedAsset) return [];
+    const filtered = rateHistory
+      .filter((e) => e.rates?.[selectedAsset] != null)
+      .slice(-60);
 
-      simulatedPoints.push({
-        time: timeLabel,
-        price: i === 0 ? currentPrice : simulatedPrice, // Ensure last point is live
-      });
+    if (filtered.length === 0) {
+      const cur = rates[selectedAsset];
+      return cur ? [{ time: 'Şimdi', price: cur }] : [];
     }
-    return simulatedPoints;
-  }, [selectedAsset, rates, timeframe]);
+
+    return filtered.map((entry) => ({
+      time: new Date(entry.timestamp).toLocaleTimeString('tr-TR', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      }),
+      price: entry.rates[selectedAsset],
+    }));
+  }, [rateHistory, selectedAsset, rates]);
 
   const currentPrice = rates[selectedAsset] || 0;
+  const firstPrice = chartData.length > 1 ? chartData[0].price : currentPrice;
+  const changePercent = firstPrice ? ((currentPrice - firstPrice) / firstPrice) * 100 : 0;
+  const isUp = changePercent >= 0;
+  const lineColor = isUp ? '#0ECB81' : '#F6465D';
+
+  const prices = chartData.map((d) => d.price);
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 0;
+
+  const label = assetNames[selectedAsset] || selectedAsset;
 
   return (
-    <div className="glass-card" style={{ padding: '24px', minHeight: '440px' }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '24px',
-      }}>
+    <div className="glass-card" style={{ padding: '24px', minHeight: '420px', display: 'flex', flexDirection: 'column' }}>
+      {/* Başlık */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: 700,
-              color: 'var(--color-text-primary)',
-            }}>
-              {selectedAsset} Analizi
-            </h3>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: 500, marginBottom: '4px' }}>
+            {label}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
             <span style={{
-              fontSize: '12px',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              background: 'rgba(0, 127, 255, 0.1)',
-              color: '#007fff',
-              fontWeight: 600
+              fontSize: '28px', fontWeight: 700,
+              fontFamily: "'JetBrains Mono', monospace",
+              color: 'var(--color-text-primary)',
+              letterSpacing: '-1px',
             }}>
-              Canlı Simülasyon
+              {formatPrice(currentPrice, selectedAsset)}
+              <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '4px' }}>₺</span>
             </span>
+            {changePercent !== 0 && (
+              <span style={{
+                fontSize: '13px', fontWeight: 600,
+                color: isUp ? '#0ECB81' : '#F6465D',
+              }}>
+                {isUp ? '+' : ''}{changePercent.toFixed(3)}%
+              </span>
+            )}
           </div>
-          <p style={{
-            fontSize: '24px',
-            fontWeight: 800,
-            color: 'var(--color-text-primary)',
-            marginTop: '8px',
-            fontFamily: "'JetBrains Mono', monospace"
-          }}>
-            {currentPrice.toFixed(4)}
-          </p>
+          {prices.length > 1 && (
+            <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                Y: <b style={{ color: '#0ECB81' }}>{formatPrice(maxPrice, selectedAsset)}</b>
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                D: <b style={{ color: '#F6465D' }}>{formatPrice(minPrice, selectedAsset)}</b>
+              </span>
+            </div>
+          )}
         </div>
-        
         <div style={{ textAlign: 'right' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            justifyContent: 'flex-end'
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'flex-end' }}>
             <div className="pulse-live" style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: 'var(--color-success)',
+              width: '7px', height: '7px', borderRadius: '50%', background: '#0ECB81',
             }} />
-            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-              Piyasa Açık
-            </span>
+            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Canlı</span>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-            Son Güncelleme: {new Date().toLocaleTimeString()}
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '3px' }}>
+            {new Date().toLocaleTimeString('tr-TR')}
           </div>
         </div>
       </div>
 
-      <div style={{ width: '100%', height: 300 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData}>
-            <defs>
-              <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#007fff" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#007fff" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(200, 200, 200, 0.2)" />
-            <XAxis 
-              dataKey="time" 
-              hide={true}
-            />
-            <YAxis 
-              hide={true}
-              domain={['auto', 'auto']}
-            />
-            <Tooltip
-              contentStyle={{
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              }}
-              itemStyle={{ color: '#000000', fontWeight: 700 }}
-              labelStyle={{ color: '#666666', marginBottom: '4px' }}
-            />
-            <Area
-              type="monotone"
-              dataKey="price"
-              stroke="#007fff"
-              strokeWidth={3}
-              fillOpacity={1}
-              fill="url(#colorPrice)"
-              animationDuration={1500}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      {/* Grafik */}
+      <div style={{ flex: 1, minHeight: 260 }}>
+        {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={lineColor} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={lineColor} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+              <XAxis
+                dataKey="time"
+                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                interval="preserveStartEnd"
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                domain={['auto', 'auto']}
+                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                tickLine={false}
+                axisLine={false}
+                width={72}
+                tickFormatter={(v) => formatPrice(v, selectedAsset)}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: '#fff',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  fontSize: '12px',
+                  padding: '8px 12px',
+                }}
+                itemStyle={{ color: 'var(--color-text-primary)', fontWeight: 600 }}
+                labelStyle={{ color: 'var(--color-text-muted)', fontSize: '11px', marginBottom: '2px' }}
+                formatter={(v: number) => [`${formatPrice(v, selectedAsset)} ₺`, '']}
+              />
+              <Area
+                type="monotone"
+                dataKey="price"
+                stroke={lineColor}
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#chartGrad)"
+                dot={false}
+                activeDot={{ r: 4, fill: lineColor, stroke: '#fff', strokeWidth: 2 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{
+            height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--color-text-muted)', fontSize: '13px',
+          }}>
+            Bağlanıyor...
+          </div>
+        )}
       </div>
 
+      {/* Alt bilgi */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginTop: '16px',
-        paddingTop: '16px',
-        borderTop: '1px solid var(--color-border)'
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-border)',
       }}>
-        {['1 Gün', '1 Hafta', '1 Ay', '1 Yıl'].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTimeframe(t)}
-            style={{
-              background: timeframe === t ? 'rgba(0, 127, 255, 0.15)' : 'transparent',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: timeframe === t ? '#007fff' : 'var(--color-text-muted)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {t}
-          </button>
-        ))}
+        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+          {chartData.length} güncelleme • 10sn aralık
+        </span>
+        <span style={{ fontSize: '11px', color: isUp ? '#0ECB81' : '#F6465D', fontWeight: 600 }}>
+          {isUp ? '▲' : '▼'} {Math.abs(changePercent).toFixed(3)}%
+        </span>
       </div>
     </div>
   );

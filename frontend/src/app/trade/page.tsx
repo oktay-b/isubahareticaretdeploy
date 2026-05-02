@@ -8,7 +8,7 @@ import { walletApi } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import Navbar from '@/components/Navbar';
 import TradeForm from '@/components/TradeForm';
-import RateCard from '@/components/RateCard';
+import RateCard, { HIDDEN_PAIRS } from '@/components/RateCard';
 
 export default function TradePage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function TradePage() {
 
   if (!mounted) return null;
 
-  const pairs = Object.keys(rates);
+  const pairs = Object.keys(rates).filter((p) => !HIDDEN_PAIRS.has(p));
 
   return (
     <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>

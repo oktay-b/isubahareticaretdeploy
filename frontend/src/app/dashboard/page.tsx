@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore';
 import { walletApi } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import Navbar from '@/components/Navbar';
-import RateCard from '@/components/RateCard';
+import RateCard, { HIDDEN_PAIRS } from '@/components/RateCard';
 import RateChart from '@/components/RateChart';
 import TradeForm from '@/components/TradeForm';
 import WalletCard from '@/components/WalletCard';
@@ -56,7 +56,8 @@ export default function DashboardPage() {
 
   if (!mounted) return null;
 
-  const pairs = Object.keys(rates);
+  // Gizli alt tipler filtrele (Çeyrek, Yarım, Tam, Cumhuriyet Altını)
+  const pairs = Object.keys(rates).filter((p) => !HIDDEN_PAIRS.has(p));
 
   // Calculate total portfolio value in TRY
   const totalTRY = wallets.reduce((acc, w) => {
@@ -70,66 +71,69 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
       <Navbar />
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
-        {/* Welcome Header */}
-        <div className="slide-up" style={{ marginBottom: '32px' }}>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: 800,
-            color: 'var(--color-text-primary)',
-            marginBottom: '8px',
-          }}>
-            Hoş Geldin, {user?.name || 'Trader'}
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
-            Portföy değeriniz:{' '}
-            <span style={{
-              color: 'var(--color-success)',
-              fontWeight: 700,
-              fontSize: '16px',
+      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px 24px' }}>
+
+        {/* Üst bar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '20px', paddingBottom: '16px',
+          borderBottom: '1px solid var(--color-border)',
+        }}>
+          <div>
+            <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+              {user?.name || 'Trader'}
+            </div>
+            <div style={{
+              fontSize: '22px', fontWeight: 700,
+              fontFamily: "'JetBrains Mono', monospace",
+              color: 'var(--color-text-primary)',
+              letterSpacing: '-0.5px',
             }}>
-              {new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(totalTRY)} ₺
-            </span>
-          </p>
+              {new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(totalTRY)}
+              <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '4px' }}>₺</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="pulse-live" style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#0ECB81' }} />
+            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Piyasa Açık</span>
+          </div>
         </div>
 
-        {/* Rate Cards */}
+        {/* Fiyat kartları — ticker grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: '10px',
+          marginBottom: '20px',
         }}>
           {pairs.map((pair) => (
             <RateCard key={pair} pair={pair} rate={rates[pair]} />
           ))}
         </div>
 
-        {/* Chart + Trade Form */}
+        {/* Grafik + İşlem formu */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 380px',
-          gap: '24px',
-          marginBottom: '24px',
+          gridTemplateColumns: '1fr 360px',
+          gap: '20px',
+          marginBottom: '20px',
         }}>
           <RateChart />
           <TradeForm />
         </div>
 
-        {/* Wallet Summary */}
+        {/* Cüzdanlar */}
         <div style={{ marginBottom: '24px' }}>
-          <h2 style={{
-            fontSize: '18px',
-            fontWeight: 700,
-            color: 'var(--color-text-primary)',
-            marginBottom: '16px',
+          <div style={{
+            fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)',
+            textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px',
           }}>
-            Cüzdanlarım
-          </h2>
+            Varlıklarım
+          </div>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: '16px',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '10px',
           }}>
             {wallets.map((w) => (
               <WalletCard key={w.currency} currency={w.currency} balance={w.balance} />
