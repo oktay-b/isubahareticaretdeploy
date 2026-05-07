@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -16,6 +16,15 @@ const assetNames: Record<string, string> = {
   'ETH/TRY':        'ETH / TRY',
 };
 
+type TimeRange = '1G' | '1H' | '1A' | '1Y';
+
+const ranges: { label: string; value: TimeRange; ms: number }[] = [
+  { label: 'Gün',   value: '1G', ms: 24 * 60 * 60 * 1000 },
+  { label: 'Hafta', value: '1H', ms: 7 * 24 * 60 * 60 * 1000 },
+  { label: 'Ay',    value: '1A', ms: 30 * 24 * 60 * 60 * 1000 },
+  { label: 'Yıl',   value: '1Y', ms: 365 * 24 * 60 * 60 * 1000 },
+];
+
 function formatPrice(value: number, pair: string): string {
   if (pair.startsWith('BTC') || pair.startsWith('ETH')) {
     return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(value);
@@ -26,28 +35,31 @@ function formatPrice(value: number, pair: string): string {
   return value.toFixed(4);
 }
 
-
 export default function RateChart() {
   const { rateHistory, selectedAsset, rates } = useStore();
+  const [timeRange, setTimeRange] = useState<TimeRange>('1G');
 
   const chartData = useMemo(() => {
     if (!selectedAsset) return [];
+
+    const cutoff = Date.now() - ranges.find((r) => r.value === timeRange)!.ms;
+
     const filtered = rateHistory
-      .filter((e) => e.rates?.[selectedAsset] != null)
-      .slice(-60);
+      .filter((e) => e.rates?.[selectedAsset] != null && e.timestamp >= cutoff)
+      .slice(-200);
 
     if (filtered.length === 0) {
       const cur = rates[selectedAsset];
       return cur ? [{ time: 'Şimdi', price: cur }] : [];
     }
 
-    return filtered.map((entry) => ({
-      time: new Date(entry.timestamp).toLocaleTimeString('tr-TR', {
+    return filtered.map((e) => ({
+      time: new Date(e.timestamp).toLocaleTimeString('tr-TR', {
         hour: '2-digit', minute: '2-digit', second: '2-digit',
       }),
-      price: entry.rates[selectedAsset],
+      price: e.rates[selectedAsset],
     }));
-  }, [rateHistory, selectedAsset, rates]);
+  }, [rateHistory, selectedAsset, rates, timeRange]);
 
   const currentPrice = rates[selectedAsset] || 0;
   const firstPrice = chartData.length > 1 ? chartData[0].price : currentPrice;
@@ -63,7 +75,6 @@ export default function RateChart() {
 
   return (
     <div className="glass-card" style={{ padding: '24px', minHeight: '420px', display: 'flex', flexDirection: 'column' }}>
-      {/* Başlık */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: 500, marginBottom: '4px' }}>
@@ -80,10 +91,7 @@ export default function RateChart() {
               <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '4px' }}>₺</span>
             </span>
             {changePercent !== 0 && (
-              <span style={{
-                fontSize: '13px', fontWeight: 600,
-                color: isUp ? '#0ECB81' : '#F6465D',
-              }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: isUp ? '#0ECB81' : '#F6465D' }}>
                 {isUp ? '+' : ''}{changePercent.toFixed(3)}%
               </span>
             )}
@@ -101,9 +109,7 @@ export default function RateChart() {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'flex-end' }}>
-            <div className="pulse-live" style={{
-              width: '7px', height: '7px', borderRadius: '50%', background: '#0ECB81',
-            }} />
+            <div className="pulse-live" style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#0ECB81' }} />
             <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Canlı</span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '3px' }}>
@@ -112,7 +118,6 @@ export default function RateChart() {
         </div>
       </div>
 
-      {/* Grafik */}
       <div style={{ flex: 1, minHeight: 260 }}>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -174,7 +179,28 @@ export default function RateChart() {
         )}
       </div>
 
-      {/* Alt bilgi */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '16px' }}>
+        {ranges.map((r) => (
+          <button
+            key={r.value}
+            onClick={() => setTimeRange(r.value)}
+            style={{
+              padding: '5px 14px',
+              fontSize: '12px',
+              fontWeight: timeRange === r.value ? 700 : 500,
+              borderRadius: '6px',
+              border: timeRange === r.value ? `1px solid ${lineColor}` : '1px solid var(--color-border)',
+              background: timeRange === r.value ? `${lineColor}18` : 'transparent',
+              color: timeRange === r.value ? lineColor : 'var(--color-text-muted)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-border)',
