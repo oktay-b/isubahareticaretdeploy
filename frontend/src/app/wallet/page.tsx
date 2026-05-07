@@ -100,7 +100,7 @@ export default function WalletPage() {
           gap: '16px',
         }}>
           {wallets.map((w) => (
-            <WalletCard key={w.id} currency={w.currency} balance={w.balance} />
+            <WalletCard key={w.currency} currency={w.currency} balance={w.balance} />
           ))}
         </div>
       </main>
