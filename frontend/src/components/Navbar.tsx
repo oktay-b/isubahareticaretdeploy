@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { useEffect, useState } from 'react';
 
 const navLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: '' },
+  { href: '/dashboard', label: 'Anasayfa', icon: '' },
   { href: '/trade', label: 'Al / Sat', icon: '' },
   { href: '/wallet', label: 'Cüzdan', icon: '' },
   { href: '/history', label: 'İşlem Geçmişi', icon: '' },
