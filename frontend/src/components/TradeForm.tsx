@@ -35,11 +35,12 @@ export default function TradeForm() {
     [rates]
   );
 
-  const [mode,    setMode]    = useState<'BUY' | 'SELL'>('BUY');
-  const [asset,   setAsset]   = useState('USD');
-  const [amount,  setAmount]  = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState<{ text: string; ok: boolean } | null>(null);
+  const [mode,      setMode]      = useState<'BUY' | 'SELL'>('BUY');
+  const [inputType, setInputType] = useState<'TRY' | 'ASSET'>('TRY');
+  const [asset,     setAsset]     = useState('USD');
+  const [amount,    setAmount]    = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [result,    setResult]    = useState<{ text: string; ok: boolean } | null>(null);
 
   const info        = ASSET_INFO[asset] ?? { label: asset, unit: asset, icon: '📊', priceDecimals: 4, qtyDecimals: 6 };
   const isGram      = GRAM_ASSETS.has(asset);
@@ -50,29 +51,22 @@ export default function TradeForm() {
   const tryBalance  = wallets.find((w) => w.currency === 'TRY')?.balance ?? 0;
   const assetBal    = wallets.find((w) => w.currency === asset)?.balance ?? 0;
   const numAmount   = parseFloat(amount) || 0;
+  const isTryInput  = inputType === 'TRY';
 
-  const buyCost     = mode === 'BUY' && isGram  && buyPrice  > 0 ? numAmount * buyPrice  : null;
-  const buyQty      = mode === 'BUY' && !isGram && buyPrice  > 0 ? numAmount / buyPrice  : null;
-  const sellRevenue = mode === 'SELL'            && sellPrice > 0 ? numAmount * sellPrice : null;
+  const buyCost     = mode === 'BUY' ? (isTryInput ? numAmount : numAmount * buyPrice) : 0;
+  const buyQty      = mode === 'BUY' ? (isTryInput ? (buyPrice > 0 ? numAmount / buyPrice : 0) : numAmount) : 0;
+  const sellRevenue = mode === 'SELL' ? (isTryInput ? numAmount : numAmount * sellPrice) : 0;
+  const sellQty     = mode === 'SELL' ? (isTryInput ? (sellPrice > 0 ? numAmount / sellPrice : 0) : numAmount) : 0;
 
   const maxForPct = mode === 'SELL'
-    ? assetBal
-    : isGram && buyPrice > 0
-    ? tryBalance / buyPrice
-    : tryBalance;
+    ? (isTryInput ? assetBal * sellPrice : assetBal)
+    : (isTryInput ? tryBalance : (buyPrice > 0 ? tryBalance / buyPrice : 0));
 
   const handleTrade = async () => {
     if (numAmount <= 0) { setResult({ text: 'Geçerli bir miktar giriniz.', ok: false }); return; }
     if (!midPrice)      { setResult({ text: 'Fiyat bekleniyor, lütfen bekleyiniz.', ok: false }); return; }
 
-    let quantity: number;
-    if (mode === 'BUY') {
-      quantity = isGram
-        ? numAmount
-        : numAmount / buyPrice;
-    } else {
-      quantity = numAmount;
-    }
+    let quantity = mode === 'BUY' ? buyQty : sellQty;
 
     if (quantity < 0.000001) {
       setResult({ text: 'Miktar çok küçük.', ok: false });
@@ -89,7 +83,7 @@ export default function TradeForm() {
         const res = await tradeApi.buy(payload);
         const d   = res.data;
         const gotQty   = Number(d.quantity ?? quantity);
-        const paidTRY  = Number(d.total    ?? (isGram ? buyCost : numAmount) ?? 0);
+        const paidTRY  = Number(d.total    ?? buyCost ?? 0);
         const rate     = Number(d.price    ?? buyPrice);
 
         const msg = isGram
@@ -121,13 +115,7 @@ export default function TradeForm() {
   };
 
   // ── Etiketler ──
-  const inputLabel = mode === 'BUY'
-    ? (isGram ? `Alınacak ${info.unit}` : 'Ödenecek tutar')
-    : `Satılacak ${info.unit}`;
-
-  const inputSuffix = mode === 'BUY'
-    ? (isGram ? info.unit : '₺')
-    : info.unit;
+  const inputSuffix = inputType === 'TRY' ? '₺' : info.unit;
 
   const balanceHint = mode === 'BUY'
     ? `Bakiye: ${n(tryBalance, 2)} ₺`
@@ -213,10 +201,33 @@ export default function TradeForm() {
 
       {/* Miktar */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {inputLabel}
-          </label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: 'var(--color-surface-light)', borderRadius: '6px', padding: '3px' }}>
+            <button
+              onClick={() => { setInputType('TRY'); setAmount(''); setResult(null); }}
+              style={{
+                padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: 'none', borderRadius: '4px',
+                background: inputType === 'TRY' ? 'var(--color-surface)' : 'transparent',
+                color: inputType === 'TRY' ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                boxShadow: inputType === 'TRY' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              Tutar (₺)
+            </button>
+            <button
+              onClick={() => { setInputType('ASSET'); setAmount(''); setResult(null); }}
+              style={{
+                padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: 'none', borderRadius: '4px',
+                background: inputType === 'ASSET' ? 'var(--color-surface)' : 'transparent',
+                color: inputType === 'ASSET' ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                boxShadow: inputType === 'ASSET' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              Miktar ({info.unit})
+            </button>
+          </div>
           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{balanceHint}</span>
         </div>
 
@@ -274,35 +285,39 @@ export default function TradeForm() {
             </span>
           </div>
 
-          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '6px' }}>
-            {/* AL gram → maliyet */}
-            {mode === 'BUY' && isGram && buyCost != null && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Toplam ödeme</span>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#0ECB81', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {n(buyCost, 2)} ₺
-                </span>
-              </div>
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {mode === 'BUY' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Toplam ödeme</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#0ECB81', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {n(buyCost, 2)} ₺
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Alınacak miktar</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#0ECB81', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {n(buyQty, info.qtyDecimals)} {info.unit}
+                  </span>
+                </div>
+              </>
             )}
 
-            {/* AL döviz/kripto → alınacak miktar */}
-            {mode === 'BUY' && !isGram && buyQty != null && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Alınacak miktar</span>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#0ECB81', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {n(buyQty, info.qtyDecimals)} {info.unit}
-                </span>
-              </div>
-            )}
-
-            {/* SAT → kazanılacak TRY */}
-            {mode === 'SELL' && sellRevenue != null && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Kazanılacak TRY</span>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#F6465D', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {n(sellRevenue, 2)} ₺
-                </span>
-              </div>
+            {mode === 'SELL' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Kazanılacak TRY</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#F6465D', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {n(sellRevenue, 2)} ₺
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Satılacak miktar</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#F6465D', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {n(sellQty, info.qtyDecimals)} {info.unit}
+                  </span>
+                </div>
+              </>
             )}
           </div>
         </div>

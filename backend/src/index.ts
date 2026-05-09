@@ -26,6 +26,21 @@ app.use('/api/trade', transactionRoutes);
 app.use('/api/rates', ratesRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Ana API dizini
+app.get('/api', (_req, res) => {
+  res.json({
+    message: 'Yatırım Simülatörü API\'sine Hoş Geldiniz!',
+    endpoints: [
+      '/api/auth',
+      '/api/portfolio',
+      '/api/trade',
+      '/api/rates',
+      '/api/admin',
+      '/api/health'
+    ]
+  });
+});
+
 // sağlık kontrolü
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
