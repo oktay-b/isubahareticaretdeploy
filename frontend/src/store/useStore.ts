@@ -60,6 +60,10 @@ interface AppStore {
   // Selected for Graph
   selectedAsset: string;
   setSelectedAsset: (asset: string) => void;
+
+  // Theme
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 export const useStore = create<AppStore>((set, get) => ({
@@ -111,4 +115,16 @@ export const useStore = create<AppStore>((set, get) => ({
   // Selected for Graph
   selectedAsset: 'USD/TRY',
   setSelectedAsset: (selectedAsset) => set({ selectedAsset }),
+
+  // Theme
+  theme: 'light',
+  toggleTheme: () => {
+    const current = get().theme;
+    const next = current === 'light' ? 'dark' : 'light';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', next);
+      document.documentElement.setAttribute('data-theme', next);
+    }
+    set({ theme: next });
+  },
 }));

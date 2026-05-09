@@ -49,7 +49,7 @@ export default function WalletPage() {
   }, 0);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-surface)' }}>
       <Navbar />
       <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px' }}>
         <div className="slide-up" style={{ marginBottom: '32px' }}>

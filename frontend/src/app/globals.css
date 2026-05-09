@@ -22,6 +22,21 @@
 }
 
 @layer base {
+  :root[data-theme="dark"] {
+    --color-primary: #3399ff;
+    --color-primary-light: #66b2ff;
+    --color-primary-dark: #005ce6;
+    --color-surface: #0a0a0a;
+    --color-surface-light: #171717;
+    --color-surface-lighter: #262626;
+    --color-text-primary: #F3F4F6;
+    --color-text-secondary: #D1D5DB;
+    --color-text-muted: #9CA3AF;
+    --color-border: #262626;
+    --color-glass: rgba(10, 10, 10, 0.85);
+    --color-glass-light: rgba(23, 23, 23, 0.75);
+  }
+
   * {
     box-sizing: border-box;
     margin: 0;
@@ -29,7 +44,7 @@
   }
 
   body {
-    background: #FFFFFF;
+    background: var(--color-surface);
     color: var(--color-text-primary);
     font-family: var(--font-sans);
     min-height: 100vh;
@@ -82,7 +97,7 @@
 
 /* Animated gradient background */
 .gradient-bg {
-  background: #FFFFFF;
+  background: var(--color-surface);
   background-size: 400% 400%;
   animation: gradient-shift 15s ease infinite;
 }

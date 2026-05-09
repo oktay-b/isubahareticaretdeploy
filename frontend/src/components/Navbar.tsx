@@ -16,11 +16,16 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useStore();
+  const { user, clearAuth, theme, toggleTheme } = useStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      useStore.setState({ theme: savedTheme });
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -61,7 +66,7 @@ export default function Navbar() {
           <span style={{
             fontSize: '20px',
             fontWeight: 800,
-            color: '#000000',
+            color: 'var(--color-text-primary)',
             letterSpacing: '-0.5px'
           }}>
             TradingPlatform
@@ -119,11 +124,29 @@ export default function Navbar() {
           alignItems: 'center',
           gap: '16px',
         }}>
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '36px', height: '36px', borderRadius: '50%',
+              background: 'transparent',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-surface-lighter)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            title="Temayı Değiştir"
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+
           {user && (
             <Link href="/profile" style={{
               fontSize: '14px',
               fontWeight: 600,
-              color: '#000000',
+              color: 'var(--color-text-primary)',
               textDecoration: 'none',
               cursor: 'pointer',
             }}>
