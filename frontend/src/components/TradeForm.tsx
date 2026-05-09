@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { tradeApi, walletApi } from '@/lib/api';
 
-// ─── Sabit tanımlar ───────────────────────────────────────────────────────────
 
 const ASSET_INFO: Record<string, { label: string; unit: string; icon: string; priceDecimals: number; qtyDecimals: number }> = {
   USD:        { label: 'Amerikan Doları', unit: 'USD',  icon: '$',  priceDecimals: 4, qtyDecimals: 4 },
@@ -16,19 +15,14 @@ const ASSET_INFO: Record<string, { label: string; unit: string; icon: string; pr
   ETH:        { label: 'Ethereum',       unit: 'ETH',  icon: 'Ξ',  priceDecimals: 0, qtyDecimals: 6 },
 };
 
-// Dropdown'dan gizlenecek alt tipler
 const HIDDEN = new Set(['CEYREK_ALTIN', 'YARIM_ALTIN', 'TAM_ALTIN', 'CUMHURIYET_ALTINI']);
-
-// Gram cinsinden işlem yapılan varlıklar
 const GRAM_ASSETS = new Set(['GRAM_ALTIN', 'GRAM_GUMUS']);
 
-// ─── Format yardımcıları ──────────────────────────────────────────────────────
 
 function n(val: number, dec: number): string {
   return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(val);
 }
 
-// ─── Bileşen ──────────────────────────────────────────────────────────────────
 
 export default function TradeForm() {
   const { rates, setWallets, wallets } = useStore();
@@ -57,37 +51,27 @@ export default function TradeForm() {
   const assetBal    = wallets.find((w) => w.currency === asset)?.balance ?? 0;
   const numAmount   = parseFloat(amount) || 0;
 
-  // ── Tahmini hesap ──
-  // AL - gram:    kullanıcı gram girer → toplam TRY maliyet = gram × alış
-  // AL - döviz:   kullanıcı TRY girer → alınacak birim = TRY / alış
-  // SAT - her şey: kullanıcı birim/gram girer → kazanılacak TRY = birim × satış
   const buyCost     = mode === 'BUY' && isGram  && buyPrice  > 0 ? numAmount * buyPrice  : null;
   const buyQty      = mode === 'BUY' && !isGram && buyPrice  > 0 ? numAmount / buyPrice  : null;
   const sellRevenue = mode === 'SELL'            && sellPrice > 0 ? numAmount * sellPrice : null;
 
-  // % butonları için max
-  // AL - gram:   bakiyenle alabileceğin max gram = tryBalance / buyPrice
-  // AL - döviz:  harcanacak max TRY = tryBalance
-  // SAT:         elindeki varlık = assetBal
   const maxForPct = mode === 'SELL'
     ? assetBal
     : isGram && buyPrice > 0
-    ? tryBalance / buyPrice   // max gram
-    : tryBalance;             // max TRY
+    ? tryBalance / buyPrice
+    : tryBalance;
 
-  // ── İşlem gönder ──
   const handleTrade = async () => {
     if (numAmount <= 0) { setResult({ text: 'Geçerli bir miktar giriniz.', ok: false }); return; }
     if (!midPrice)      { setResult({ text: 'Fiyat bekleniyor, lütfen bekleyiniz.', ok: false }); return; }
 
-    // quantity = kaç birim/gram backend'e gönderiliyor
     let quantity: number;
     if (mode === 'BUY') {
       quantity = isGram
-        ? numAmount              // gram girdi → direkt
-        : numAmount / buyPrice;  // TRY girdi → birime çevir
+        ? numAmount
+        : numAmount / buyPrice;
     } else {
-      quantity = numAmount;      // sat: her zaman direkt birim/gram
+      quantity = numAmount;
     }
 
     if (quantity < 0.000001) {

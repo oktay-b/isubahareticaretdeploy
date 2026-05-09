@@ -122,8 +122,8 @@ export class TradeService {
 
       // holding güncelle
       const newQty = Number(holding.quantity) - quantity;
-      if (newQty <= 0.0001) {
-        // neredeyse sıfır kaldıysa sil
+      if (newQty <= 0.00000001) {
+        // neredeyse sıfır kaldıysa sil (floating point hatası payı)
         await tx.holding.delete({ where: { id: holding.id } });
       } else {
         await tx.holding.update({

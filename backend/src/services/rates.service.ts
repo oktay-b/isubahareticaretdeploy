@@ -301,15 +301,6 @@ export class PriceService {
       priceHistory = priceHistory.slice(-MAX_HISTORY);
     }
 
-    // Kaynak bilgisini logla
-    const sources: string[] = [];
-    if (forex)        sources.push('Forex(open.er-api.com)');
-    if (xauUsd)       sources.push('Gold(Swissquote)');
-    if (xagUsd)       sources.push('Silver(Swissquote)');
-    if (cryptoPrices) sources.push('Crypto(CoinGecko)');
-    console.log(
-      `[Fiyat] Güncellendi — ${sources.join(', ') || 'Simülasyon'} | USD/TRY: ${usdTry.toFixed(2)} | XAU/USD: ${xauUsd.toFixed(2)} | XAG/USD: ${xagUsd.toFixed(3)} | 1g Altın: ${gramGoldTry.toFixed(2)} ₺ | 1g Gümüş: ${gramSilverTry.toFixed(2)} ₺ | BTC/TRY: ${cryptoPrices?.btcTry?.toLocaleString('tr-TR') || 'N/A'}`
-    );
 
     return result;
   }

@@ -18,11 +18,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// istek loglama
-app.use((req, _res, next) => {
-  console.log(`${new Date().toLocaleTimeString('tr-TR')} ${req.method} ${req.path}`);
-  next();
-});
 
 // route'lar
 app.use('/api/auth', authRoutes);
