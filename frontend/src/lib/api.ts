@@ -40,6 +40,8 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post('/auth/login', data),
   getProfile: () => api.get('/auth/me'),
+  updateProfile: (data: { name?: string; currentPassword?: string; newPassword?: string }) =>
+    api.put('/auth/me', data),
 };
 
 // Wallet API

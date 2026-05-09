@@ -10,6 +10,7 @@ const navLinks = [
   { href: '/trade', label: 'Al / Sat', icon: '' },
   { href: '/wallet', label: 'Cüzdan', icon: '' },
   { href: '/history', label: 'İşlem Geçmişi', icon: '' },
+  { href: '/profile', label: 'Profil', icon: '' },
 ];
 
 export default function Navbar() {
@@ -119,13 +120,15 @@ export default function Navbar() {
           gap: '16px',
         }}>
           {user && (
-            <span style={{
+            <Link href="/profile" style={{
               fontSize: '14px',
               fontWeight: 600,
               color: '#000000',
+              textDecoration: 'none',
+              cursor: 'pointer',
             }}>
               {user.name}
-            </span>
+            </Link>
           )}
           <button
             onClick={handleLogout}

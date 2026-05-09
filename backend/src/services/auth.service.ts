@@ -60,6 +60,37 @@ export class AuthService {
     return { ...user, balance: Number(user.balance) };
   }
 
+  async updateProfile(userId: string, data: { name?: string; currentPassword?: string; newPassword?: string }) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Kullanıcı bulunamadı.');
+
+    const updateData: any = {};
+
+    if (data.name && data.name.trim().length > 0) {
+      updateData.name = data.name.trim();
+    }
+
+    if (data.newPassword) {
+      if (!data.currentPassword) {
+        throw new Error('Şifre değiştirmek için mevcut şifrenizi girmelisiniz.');
+      }
+      const valid = await bcrypt.compare(data.currentPassword, user.password);
+      if (!valid) {
+        throw new Error('Mevcut şifreniz yanlış.');
+      }
+      updateData.password = await bcrypt.hash(data.newPassword, 12);
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: updateData
+      });
+    }
+
+    return this.getProfile(userId);
+  }
+
   private generateToken(userId: string, email: string, role: string): string {
     return jwt.sign({ userId, email, role }, config.jwtSecret, { expiresIn: '7d' });
   }
