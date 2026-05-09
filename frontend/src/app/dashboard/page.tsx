@@ -9,7 +9,6 @@ import { getSocket } from '@/lib/socket';
 import Navbar from '@/components/Navbar';
 import RateCard, { HIDDEN_PAIRS } from '@/components/RateCard';
 import RateChart from '@/components/RateChart';
-import TradeForm from '@/components/TradeForm';
 import WalletCard from '@/components/WalletCard';
 
 export default function DashboardPage() {
@@ -111,15 +110,14 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Grafik + İşlem formu */}
+        {/* Grafik */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 360px',
+          gridTemplateColumns: '1fr',
           gap: '20px',
           marginBottom: '20px',
         }}>
           <RateChart />
-          <TradeForm />
         </div>
 
         {/* Cüzdanlar */}

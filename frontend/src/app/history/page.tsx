@@ -36,8 +36,18 @@ export default function HistoryPage() {
     setLoading(true);
     try {
       const res = await tradeApi.getHistory(p, 20);
-      setTransactions(res.data.transactions);
-      setTotalPages(res.data.pagination.totalPages);
+      const mappedTransactions = (res.data.orders || []).map((o: any) => ({
+        id: o.id,
+        type: o.type,
+        fromCurrency: o.type === 'BUY' ? 'TRY' : o.asset?.symbol || '',
+        toCurrency: o.type === 'BUY' ? o.asset?.symbol || '' : 'TRY',
+        amount: Number(o.quantity) || 0,
+        rate: Number(o.price) || 0,
+        total: Number(o.total) || 0,
+        createdAt: o.createdAt
+      }));
+      setTransactions(mappedTransactions);
+      setTotalPages(res.data.pagination?.totalPages || 1);
       setPage(p);
     } catch (err) {
       console.error('İşlem geçmişi yüklenemedi:', err);
