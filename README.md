@@ -1,22 +1,24 @@
 # İSÜ Bahar — Yatırım Simülatörü
 
-Gerçek zamanlı altın, döviz ve kripto para takip ve alım-satım platformu. Canlı fiyatlarla simüle edilmiş yatırım işlemleri yapın, portföyünüzü takip edin, kar/zarar durumunuzu görün.
+Gerçek zamanlı döviz, altın ve kripto takip & alım-satım platformu. Kullanıcılar 100.000 ₺ demo bakiyeyle başlayarak canlı fiyatlar üzerinden işlem yapabilir, portföylerini takip edebilir ve kar/zarar durumlarını görebilir.
 
 ## Özellikler
 
-- Gram/çeyrek/yarım/tam/Cumhuriyet altını ve gram gümüş takibi
 - USD, EUR, GBP döviz alım-satım
-- Bitcoin ve Ethereum (simüle) alım-satım
+- Gram altın, gram gümüş takibi ve işlem
+- Bitcoin ve Ethereum alım-satım
 - Ortalama maliyet hesaplı portföy takibi
 - Anlık kar/zarar yüzdesi gösterimi
 - WebSocket ile canlı fiyat güncellemesi (10 saniyede bir)
-- İşlem geçmişi ve filtreleme
-- Admin paneli (varlık ve kullanıcı yönetimi)
-- JWT kimlik doğrulama, Zod validasyon
+- İşlem geçmişi
+- Admin paneli (kullanıcı ve varlık yönetimi)
+- JWT kimlik doğrulama
+- Light / Dark tema
 
 ## Kurulum
 
 ### Gereksinimler
+
 - Node.js 18+
 
 ### Backend
@@ -24,11 +26,12 @@ Gerçek zamanlı altın, döviz ve kripto para takip ve alım-satım platformu. 
 ```bash
 cd backend
 npm install
-cp .env.example .env   # .env dosyasını düzenleyin
+cp .env.example .env
+# .env dosyasını açıp JWT_SECRET değerini düzenleyin
 
 npx prisma db push
 npx prisma generate
-npm run seed            # varlıkları ve admin kullanıcıyı yükler
+npm run seed
 npm run dev
 ```
 
@@ -40,38 +43,85 @@ npm install
 npm run dev
 ```
 
-### Kullanım
+Tarayıcıda `http://localhost:3000` adresini açın.
 
-1. `http://localhost:3000` adresini açın
-2. Yeni hesap oluşturun (100.000 ₺ demo bakiye ile başlarsınız)
-3. Dashboard'dan canlı fiyatları takip edin
-4. Al/Sat sayfasından altın, döviz veya kripto alım-satım yapın
-5. Portföy sayfasından kar/zarar durumunuzu izleyin
+### İlk Kullanım
+
+1. Kayıt ol sayfasından yeni hesap oluşturun — 100.000 ₺ bakiye ile başlarsınız
+2. Dashboard'dan canlı fiyatları ve portföy durumunu takip edin
+3. Al/Sat sayfasından işlem yapın
+4. Geçmiş sayfasından tüm işlemlerinizi görün
 
 Admin girişi: `admin@isu.edu.tr` / `admin123`
 
-## Mimari
+## Proje Yapısı
 
 ```
-Frontend (Next.js + Tailwind)  →  Backend (Express + Socket.io)  →  SQLite (Prisma ORM)
-                                          ↓
-                              Simüle fiyat servisi (10sn aralıklı)
+├── backend/
+│   ├── prisma/
+│   │   └── schema.prisma        # Veritabanı şeması
+│   └── src/
+│       ├── index.js             # Sunucu giriş noktası
+│       ├── config.js            # Uygulama sabitleri
+│       ├── middleware/
+│       │   ├── auth.js          # JWT doğrulama
+│       │   └── validate.js      # İstek validasyonu
+│       ├── routes/
+│       │   ├── auth.js          # Kimlik doğrulama endpoint'leri
+│       │   ├── rates.js         # Fiyat endpoint'leri
+│       │   ├── transaction.js   # Alım-satım endpoint'leri
+│       │   ├── wallet.js        # Portföy endpoint'i
+│       │   └── admin.js         # Admin endpoint'leri
+│       ├── services/
+│       │   ├── auth.service.js
+│       │   ├── rates.service.js
+│       │   ├── trade.service.js
+│       │   ├── wallet.service.js
+│       │   └── admin.service.js
+│       └── socket/
+│           └── index.js         # WebSocket (canlı fiyat yayını)
+│
+└── frontend/
+    └── src/
+        ├── app/
+        │   ├── dashboard/       # Ana ekran
+        │   ├── trade/           # Al/Sat ekranı
+        │   ├── wallet/          # Cüzdan
+        │   ├── history/         # İşlem geçmişi
+        │   ├── profile/         # Profil
+        │   ├── login/           # Giriş
+        │   └── register/        # Kayıt
+        ├── components/
+        │   ├── Navbar.jsx
+        │   ├── RateCard.jsx
+        │   ├── RateChart.jsx
+        │   ├── TradeForm.jsx
+        │   ├── TransactionTable.jsx
+        │   └── WalletCard.jsx
+        ├── lib/
+        │   ├── api.js           # HTTP istemcisi (Axios)
+        │   ├── auth.js          # LocalStorage işlemleri
+        │   └── socket.js        # WebSocket istemcisi
+        └── store/
+            └── useStore.js      # Global state (Zustand)
 ```
 
-## API
+## API Endpoint'leri
 
 | Method | Endpoint | Açıklama |
 |--------|----------|----------|
 | POST | `/api/auth/register` | Kayıt |
 | POST | `/api/auth/login` | Giriş |
-| GET | `/api/auth/me` | Profil |
+| GET | `/api/auth/me` | Profil bilgisi |
+| PUT | `/api/auth/me` | Profil güncelle |
 | GET | `/api/portfolio` | Portföy (bakiye + varlıklar + kar/zarar) |
 | POST | `/api/trade/buy` | Varlık al |
 | POST | `/api/trade/sell` | Varlık sat |
 | GET | `/api/trade/history` | İşlem geçmişi |
 | GET | `/api/rates` | Güncel fiyatlar |
+| GET | `/api/rates/history` | Fiyat geçmişi |
 | GET | `/api/rates/assets` | Varlık listesi |
-| GET | `/api/admin/stats` | Admin istatistikleri |
+| GET | `/api/admin/stats` | Platform istatistikleri |
 | GET | `/api/admin/users` | Kullanıcı listesi |
 | GET | `/api/admin/assets` | Varlık yönetimi |
 
@@ -79,15 +129,19 @@ Frontend (Next.js + Tailwind)  →  Backend (Express + Socket.io)  →  SQLite (
 
 | Event | Yön | Açıklama |
 |-------|-----|----------|
-| `prices:update` | Server → Client | Güncel fiyatlar |
-| `prices:history` | Server → Client | Fiyat geçmişi (grafik) |
+| `prices:update` | Sunucu → İstemci | 10 saniyede bir güncel fiyatlar |
+| `prices:history` | Sunucu → İstemci | Grafik için fiyat geçmişi |
 
 ## Teknolojiler
 
 | Katman | Teknoloji |
 |--------|-----------|
-| Frontend | Next.js, Tailwind CSS, Zustand, Recharts |
-| Backend | Node.js, Express, Socket.io, TypeScript |
+| Frontend | Next.js, React, Tailwind CSS |
+| State Yönetimi | Zustand |
+| Grafik | Recharts |
+| Backend | Node.js, Express.js |
+| Gerçek Zamanlı | Socket.io |
 | Veritabanı | SQLite, Prisma ORM |
 | Kimlik Doğrulama | JWT, bcrypt |
 | Validasyon | Zod |
+| Dış Fiyat API | er-api.com, Swissquote, CoinGecko |
