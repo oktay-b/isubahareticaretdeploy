@@ -42,6 +42,7 @@ export const authApi = {
 };
 
 export const walletApi = {
+  deposit: (amount) => api.post('/portfolio/deposit', { amount }),
   getWallets: async () => {
     const res = await api.get('/portfolio');
     const mapped = [];

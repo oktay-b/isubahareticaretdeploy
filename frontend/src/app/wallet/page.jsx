@@ -8,11 +8,13 @@ import { walletApi } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import Navbar from '@/components/Navbar';
 import WalletCard from '@/components/WalletCard';
+import DepositModal from '@/components/DepositModal';
 
 export default function WalletPage() {
   const router = useRouter();
   const { setAuth, rates, setRates, wallets, setWallets } = useStore();
   const [mounted, setMounted] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -49,18 +51,36 @@ export default function WalletPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)' }}>
+      {depositOpen && (
+        <DepositModal
+          onClose={() => setDepositOpen(false)}
+          onSuccess={() => {
+            walletApi.getWallets().then((res) => setWallets(res.data)).catch(console.error);
+            setDepositOpen(false);
+          }}
+        />
+      )}
       <Navbar />
       <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px' }}>
-        <div className="slide-up" style={{ marginBottom: '32px' }}>
-          <h1 style={{
-            fontSize: '28px', fontWeight: 800,
-            color: 'var(--color-text-primary)', marginBottom: '8px',
-          }}>
-            💰 Cüzdanım
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
-            Tüm döviz bakiyeleriniz
-          </p>
+        <div className="slide-up" style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={{
+              fontSize: '28px', fontWeight: 800,
+              color: 'var(--color-text-primary)', marginBottom: '8px',
+            }}>
+              Cüzdanım
+            </h1>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+              Tüm döviz bakiyeleriniz
+            </p>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={() => setDepositOpen(true)}
+            style={{ marginTop: '4px', whiteSpace: 'nowrap' }}
+          >
+            Bakiye Yükle
+          </button>
         </div>
 
         <div className="glass-card glow-primary slide-up" style={{

@@ -2,6 +2,19 @@ import prisma from '../lib/prisma.js';
 import { priceService } from './rates.service.js';
 
 export class PortfolioService {
+  async deposit(userId, amount) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Kullanıcı bulunamadı.');
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { balance: { increment: amount } },
+      select: { balance: true },
+    });
+
+    return { balance: Number(updated.balance) };
+  }
+
   async getPortfolio(userId) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
