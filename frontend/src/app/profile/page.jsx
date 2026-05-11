@@ -4,9 +4,11 @@ import { useStore } from '@/store/useStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { authApi } from '@/lib/api';
+import Navbar from '@/components/Navbar';
+import { EyeIcon, EyeOffIcon } from '@/components/AssetIcons';
 
 export default function ProfilePage() {
-  const { user, wallets, rates, clearAuth, setAuth, token } = useStore();
+  const { user, wallets, rates, clearAuth, setAuth, token, balanceVisible, toggleBalanceVisible } = useStore();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -71,8 +73,9 @@ export default function ProfilePage() {
   if (!mounted || !user) return null;
 
   return (
-    <div className="container slide-up">
-      <div style={{ maxWidth: '800px', margin: '0 auto', paddingTop: '40px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-surface)' }}>
+      <Navbar />
+      <main style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 24px' }}>
 
         <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '24px', color: 'var(--color-text-primary)', letterSpacing: '-0.5px' }}>
           Kullanıcı Profili
@@ -109,10 +112,28 @@ export default function ProfilePage() {
             </div>
 
             <div style={{ background: 'var(--color-surface-light)', padding: '20px', borderRadius: '12px' }}>
-              <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                Toplam Portföy Değeri
+              <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Toplam Portföy Değeri</span>
+                <button
+                  onClick={toggleBalanceVisible}
+                  title={balanceVisible ? 'Bakiyeleri Gizle' : 'Bakiyeleri Göster'}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '24px', height: '24px', borderRadius: '5px',
+                    background: 'transparent', border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-muted)', cursor: 'pointer',
+                  }}
+                >
+                  {balanceVisible ? <EyeIcon size={13} /> : <EyeOffIcon size={13} />}
+                </button>
               </div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0ECB81', fontFamily: "'JetBrains Mono', monospace" }}>
+              <div style={{
+                fontSize: '20px', fontWeight: 700, color: '#0ECB81',
+                fontFamily: "'JetBrains Mono', monospace",
+                transition: 'filter 0.2s',
+                filter: balanceVisible ? 'none' : 'blur(8px)',
+                userSelect: balanceVisible ? 'auto' : 'none',
+              }}>
                 {new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalTryValue)} ₺
               </div>
             </div>
@@ -178,7 +199,7 @@ export default function ProfilePage() {
           </form>
         </div>
 
-        <div className="glass-card" style={{ padding: '30px' }}>
+        <div className="glass-card" style={{ padding: '30px', marginBottom: '30px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--color-text-primary)' }}>
             Oturum Yönetimi
           </h2>
@@ -205,7 +226,7 @@ export default function ProfilePage() {
             Hesaptan Çıkış Yap
           </button>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

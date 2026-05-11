@@ -1,6 +1,7 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
+import { GoldBarIcon, SilverBarIcon } from './AssetIcons';
 
 const assetMeta = {
   'USD/TRY':        { icon: '🇺🇸', name: 'Amerikan Doları', short: 'USD',   color: '#2563eb' },
@@ -83,7 +84,11 @@ export default function RateCard({ pair, rate }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Sol: ikon + isim */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '20px', lineHeight: 1 }}>{meta.icon}</span>
+          <span style={{ fontSize: '20px', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+              {pair === 'GRAM_ALTIN/TRY' ? <GoldBarIcon size={22} /> :
+               pair === 'GRAM_GUMUS/TRY' ? <SilverBarIcon size={22} /> :
+               meta.icon}
+            </span>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
               {meta.name}

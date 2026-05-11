@@ -52,6 +52,10 @@ export const useStore = create((set, get) => ({
   selectedAsset: 'USD/TRY',
   setSelectedAsset: (selectedAsset) => set({ selectedAsset }),
 
+  // Balance visibility
+  balanceVisible: true,
+  toggleBalanceVisible: () => set((state) => ({ balanceVisible: !state.balanceVisible })),
+
   // Theme
   theme: 'light',
   toggleTheme: () => {

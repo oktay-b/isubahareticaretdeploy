@@ -10,10 +10,15 @@ import Navbar from '@/components/Navbar';
 import RateCard, { HIDDEN_PAIRS } from '@/components/RateCard';
 import RateChart from '@/components/RateChart';
 import WalletCard from '@/components/WalletCard';
+import { EyeIcon, EyeOffIcon } from '@/components/AssetIcons';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, setAuth, rates, setRates, wallets, setWallets, addRateHistory, setRateHistory } = useStore();
+  const {
+    user, setAuth, rates, setRates, wallets, setWallets,
+    addRateHistory, setRateHistory,
+    balanceVisible, toggleBalanceVisible,
+  } = useStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -62,6 +67,8 @@ export default function DashboardPage() {
     return acc + w.balance;
   }, 0);
 
+  const formattedTotal = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(totalTRY);
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)' }}>
       <Navbar />
@@ -76,14 +83,43 @@ export default function DashboardPage() {
             <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
               {user?.name || 'Trader'}
             </div>
-            <div style={{
-              fontSize: '22px', fontWeight: 700,
-              fontFamily: "'JetBrains Mono', monospace",
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.5px',
-            }}>
-              {new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(totalTRY)}
-              <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '4px' }}>₺</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                fontSize: '22px', fontWeight: 700,
+                fontFamily: "'JetBrains Mono', monospace",
+                color: 'var(--color-text-primary)',
+                letterSpacing: '-0.5px',
+                transition: 'filter 0.2s',
+                filter: balanceVisible ? 'none' : 'blur(8px)',
+                userSelect: balanceVisible ? 'auto' : 'none',
+              }}>
+                {formattedTotal}
+                <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '4px' }}>₺</span>
+              </div>
+              <button
+                onClick={toggleBalanceVisible}
+                title={balanceVisible ? 'Bakiyeleri Gizle' : 'Bakiyeleri Göster'}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '28px', height: '28px', borderRadius: '6px',
+                  background: 'transparent',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-muted)',
+                  cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--color-surface-light)';
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--color-text-muted)';
+                }}
+              >
+                {balanceVisible
+                  ? <EyeIcon size={14} />
+                  : <EyeOffIcon size={14} />}
+              </button>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -114,10 +150,15 @@ export default function DashboardPage() {
 
         <div style={{ marginBottom: '24px' }}>
           <div style={{
-            fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: '12px',
           }}>
-            Varlıklarım
+            <div style={{
+              fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+            }}>
+              Varlıklarım
+            </div>
           </div>
           <div style={{
             display: 'grid',

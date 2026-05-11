@@ -1,17 +1,29 @@
 'use client';
 
+import { useStore } from '@/store/useStore';
+import { GoldBarIcon, SilverBarIcon } from './AssetIcons';
+
 const assetConfig = {
   TRY:               { icon: '₺',  name: 'Türk Lirası',       unit: '₺',    color: '#10b981', decimals: 2 },
   USD:               { icon: '🇺🇸', name: 'Amerikan Doları',   unit: 'USD',  color: '#2563eb', decimals: 4 },
   EUR:               { icon: '🇪🇺', name: 'Euro',              unit: 'EUR',  color: '#7c3aed', decimals: 4 },
   GBP:               { icon: '🇬🇧', name: 'İngiliz Sterlini',  unit: 'GBP',  color: '#0891b2', decimals: 4 },
-  GRAM_ALTIN:        { icon: '🥇',  name: 'Altın',             unit: 'gram', color: '#d97706', decimals: 4 },
-  GRAM_GUMUS:        { icon: '🥈',  name: 'Gümüş',             unit: 'gram', color: '#64748b', decimals: 4 },
-  BTC:               { icon: '₿',   name: 'Bitcoin',            unit: 'BTC',  color: '#f59e0b', decimals: 8 },
-  ETH:               { icon: 'Ξ',   name: 'Ethereum',           unit: 'ETH',  color: '#6366f1', decimals: 6 },
+  GRAM_ALTIN:        { icon: null,  name: 'Altın',             unit: 'gram', color: '#d97706', decimals: 4 },
+  GRAM_GUMUS:        { icon: null,  name: 'Gümüş',             unit: 'gram', color: '#64748b', decimals: 4 },
+  BTC:               { icon: '₿',   name: 'Bitcoin',           unit: 'BTC',  color: '#f59e0b', decimals: 8 },
+  ETH:               { icon: 'Ξ',   name: 'Ethereum',          unit: 'ETH',  color: '#6366f1', decimals: 6 },
 };
 
+function AssetIcon({ currency, size = 18 }) {
+  if (currency === 'GRAM_ALTIN') return <GoldBarIcon size={size} />;
+  if (currency === 'GRAM_GUMUS') return <SilverBarIcon size={size} />;
+  const cfg = assetConfig[currency];
+  return <span style={{ fontSize: size }}>{cfg?.icon ?? '📊'}</span>;
+}
+
 export default function WalletCard({ currency, balance }) {
+  const { balanceVisible } = useStore();
+
   const cfg = assetConfig[currency] || {
     icon: '📊', name: currency, unit: currency, color: '#94a3b8', decimals: 4,
   };
@@ -56,9 +68,9 @@ export default function WalletCard({ currency, balance }) {
           width: '36px', height: '36px', borderRadius: '10px',
           background: `${cfg.color}15`, border: `1px solid ${cfg.color}30`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '18px', flexShrink: 0,
+          flexShrink: 0,
         }}>
-          {cfg.icon}
+          <AssetIcon currency={currency} size={18} />
         </div>
         <div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
@@ -81,6 +93,9 @@ export default function WalletCard({ currency, balance }) {
         color: isEmpty ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
         letterSpacing: '-0.3px',
         lineHeight: 1.2,
+        transition: 'filter 0.2s',
+        filter: balanceVisible ? 'none' : 'blur(6px)',
+        userSelect: balanceVisible ? 'auto' : 'none',
       }}>
         {formatted}
         <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '4px' }}>
@@ -88,7 +103,7 @@ export default function WalletCard({ currency, balance }) {
         </span>
       </div>
 
-      {isEmpty && (
+      {isEmpty && balanceVisible && (
         <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
           Bakiye yok
         </div>

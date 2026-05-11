@@ -1,17 +1,26 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { tradeApi, walletApi } from '@/lib/api';
+import { GoldBarIcon, SilverBarIcon } from './AssetIcons';
 
 const ASSET_INFO = {
-  USD:        { label: 'Amerikan Doları', unit: 'USD',  icon: '$',  priceDecimals: 4, qtyDecimals: 4 },
-  EUR:        { label: 'Euro',            unit: 'EUR',  icon: '€',  priceDecimals: 4, qtyDecimals: 4 },
-  GBP:        { label: 'İng. Sterlini',  unit: 'GBP',  icon: '£',  priceDecimals: 4, qtyDecimals: 4 },
-  GRAM_ALTIN: { label: 'Altın',          unit: 'gram', icon: '🥇', priceDecimals: 2, qtyDecimals: 4 },
-  GRAM_GUMUS: { label: 'Gümüş',          unit: 'gram', icon: '🥈', priceDecimals: 2, qtyDecimals: 4 },
-  BTC:        { label: 'Bitcoin',        unit: 'BTC',  icon: '₿',  priceDecimals: 0, qtyDecimals: 8 },
-  ETH:        { label: 'Ethereum',       unit: 'ETH',  icon: 'Ξ',  priceDecimals: 0, qtyDecimals: 6 },
+  USD:        { label: 'Amerikan Doları', unit: 'USD',  priceDecimals: 4, qtyDecimals: 4 },
+  EUR:        { label: 'Euro',            unit: 'EUR',  priceDecimals: 4, qtyDecimals: 4 },
+  GBP:        { label: 'İng. Sterlini',   unit: 'GBP',  priceDecimals: 4, qtyDecimals: 4 },
+  GRAM_ALTIN: { label: 'Altın',           unit: 'gram', priceDecimals: 2, qtyDecimals: 4 },
+  GRAM_GUMUS: { label: 'Gümüş',           unit: 'gram', priceDecimals: 2, qtyDecimals: 4 },
+  BTC:        { label: 'Bitcoin',         unit: 'BTC',  priceDecimals: 0, qtyDecimals: 8 },
+  ETH:        { label: 'Ethereum',        unit: 'ETH',  priceDecimals: 0, qtyDecimals: 6 },
+};
+
+const ASSET_ICON = {
+  USD: '🇺🇸',
+  EUR: '🇪🇺',
+  GBP: '🇬🇧',
+  BTC: '₿',
+  ETH: 'Ξ',
 };
 
 const HIDDEN = new Set(['CEYREK_ALTIN', 'YARIM_ALTIN', 'TAM_ALTIN', 'CUMHURIYET_ALTINI']);
@@ -19,6 +28,12 @@ const GRAM_ASSETS = new Set(['GRAM_ALTIN', 'GRAM_GUMUS']);
 
 function n(val, dec) {
   return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(val);
+}
+
+function AssetSelectIcon({ sym, size = 18 }) {
+  if (sym === 'GRAM_ALTIN') return <GoldBarIcon size={size} />;
+  if (sym === 'GRAM_GUMUS') return <SilverBarIcon size={size} />;
+  return <span style={{ fontSize: size }}>{ASSET_ICON[sym] ?? '📊'}</span>;
 }
 
 export default function TradeForm() {
@@ -31,14 +46,29 @@ export default function TradeForm() {
     [rates]
   );
 
+  // asset'i store'daki mevcut rates'ten başlat; yoksa ilk yüklenimde güncelle
+  const [asset, setAsset] = useState(() => {
+    const storeRates = useStore.getState().rates;
+    const available = Object.keys(storeRates)
+      .map(p => p.split('/')[0])
+      .filter(s => s !== 'TRY' && !HIDDEN.has(s));
+    return available[0] || 'USD';
+  });
+
+  // rates ilk geldiğinde mevcut asset geçersizse senkronize et
+  useEffect(() => {
+    if (assets.length > 0 && !assets.includes(asset)) {
+      setAsset(assets[0]);
+    }
+  }, [assets]);
+
   const [mode,      setMode]      = useState('BUY');
   const [inputType, setInputType] = useState('TRY');
-  const [asset,     setAsset]     = useState('USD');
   const [amount,    setAmount]    = useState('');
   const [loading,   setLoading]   = useState(false);
   const [result,    setResult]    = useState(null);
 
-  const info        = ASSET_INFO[asset] ?? { label: asset, unit: asset, icon: '📊', priceDecimals: 4, qtyDecimals: 6 };
+  const info        = ASSET_INFO[asset] ?? { label: asset, unit: asset, priceDecimals: 4, qtyDecimals: 6 };
   const isGram      = GRAM_ASSETS.has(asset);
   const midPrice    = rates[`${asset}/TRY`] || 0;
   const SPREAD      = 0.005;
@@ -155,22 +185,47 @@ export default function TradeForm() {
         ))}
       </div>
 
-      {/* Varlık seç */}
+      {/* Varlık seç — buton grid (HTML select yerine, state kayması olmaz) */}
       <div>
-        <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Varlık
         </label>
-        <select className="select-field" value={asset} style={{ fontWeight: 600 }}
-          onChange={(e) => { setAsset(e.target.value); setAmount(''); setResult(null); }}>
-          {assets.map((sym) => (
-            <option key={sym} value={sym}>
-              {ASSET_INFO[sym]?.icon} {ASSET_INFO[sym]?.label || sym}
-            </option>
-          ))}
-        </select>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(86px, 1fr))',
+          gap: '6px',
+          marginBottom: '8px',
+        }}>
+          {assets.map((sym) => {
+            const inf = ASSET_INFO[sym];
+            const isSelected = asset === sym;
+            return (
+              <button
+                key={sym}
+                onClick={() => { setAsset(sym); setAmount(''); setResult(null); }}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '4px', padding: '8px 4px',
+                  borderRadius: '8px',
+                  border: isSelected ? '2px solid #007fff' : '1px solid var(--color-border)',
+                  background: isSelected ? 'rgba(0,127,255,0.08)' : 'var(--color-surface-light)',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  color: isSelected ? '#007fff' : 'var(--color-text-secondary)',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', lineHeight: 1 }}>
+                  <AssetSelectIcon sym={sym} size={18} />
+                </span>
+                <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.3px' }}>
+                  {inf?.unit ?? sym}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
         {midPrice > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '7px', padding: '6px 10px', background: 'var(--color-surface-light)', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', padding: '6px 10px', background: 'var(--color-surface-light)', borderRadius: '6px' }}>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: '1px' }}>Alış</div>
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#0ECB81', fontFamily: "'JetBrains Mono', monospace" }}>
